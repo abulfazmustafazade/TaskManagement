@@ -55,7 +55,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
       if (error) throw error;
       if (!team) throw new Error(t.errors.teamNotFound);
       const { error: mErr } = await supabase.from('team_members').insert({
-        team_id: team.id, user_id: profile!.id, role: 'worker'
+        team_id: teams.id, user_id: profiles.id, role: 'worker'
       });
       if (mErr) {
         if (mErr.code === '23505') throw new Error(t.errors.alreadyInTeam);
