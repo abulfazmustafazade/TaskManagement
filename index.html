@@ -1,0 +1,2293 @@
+<!doctype html>
+<html lang="az" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NextTaskX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            serif: ['Instrument Serif', 'serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            base:    'rgb(var(--c-base) / <alpha-value>)',
+            surface: 'rgb(var(--c-surface) / <alpha-value>)',
+            elev:    'rgb(var(--c-elev) / <alpha-value>)',
+            sunken:  'rgb(var(--c-sunken) / <alpha-value>)',
+            edge:    'rgb(var(--c-edge) / <alpha-value>)',
+            edgeSubtle: 'rgb(var(--c-edge-subtle) / <alpha-value>)',
+            ctext:   'rgb(var(--c-text) / <alpha-value>)',
+            ctext2:  'rgb(var(--c-text-2) / <alpha-value>)',
+            ctext3:  'rgb(var(--c-text-3) / <alpha-value>)',
+            accent:  'rgb(var(--c-accent) / <alpha-value>)',
+            accentH: 'rgb(var(--c-accent-h) / <alpha-value>)',
+            accentS: 'rgb(var(--c-accent-soft) / <alpha-value>)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root[data-theme="dark"] {
+      --c-base: 10 10 10;
+      --c-surface: 22 22 22;
+      --c-elev: 28 28 28;
+      --c-sunken: 17 17 17;
+      --c-edge: 38 38 38;
+      --c-edge-subtle: 26 26 26;
+      --c-text: 229 229 229;
+      --c-text-2: 163 163 163;
+      --c-text-3: 115 115 115;
+      --c-accent: 243 117 16;
+      --c-accent-h: 251 176 74;
+      --c-accent-soft: 60 32 12;
+      --grain-opacity: 0.035;
+    }
+    :root[data-theme="light"] {
+      --c-base: 250 250 246;
+      --c-surface: 255 255 255;
+      --c-elev: 255 255 255;
+      --c-sunken: 245 244 239;
+      --c-edge: 226 224 215;
+      --c-edge-subtle: 235 233 226;
+      --c-text: 24 24 24;
+      --c-text-2: 82 82 82;
+      --c-text-3: 138 138 138;
+      --c-accent: 178 65 11;
+      --c-accent-h: 144 51 16;
+      --c-accent-soft: 254 234 199;
+      --grain-opacity: 0.025;
+    }
+    html, body { background: rgb(var(--c-base)); color: rgb(var(--c-text)); }
+    body { font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .font-serif-italic { font-family: 'Instrument Serif', serif; font-style: italic; }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; opacity: var(--grain-opacity); z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode: var(--grain-blend, normal);
+    }
+    :root[data-theme="light"] .grain { mix-blend-mode: multiply; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgb(var(--c-edge)); border-radius: 3px; }
+    @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fade-up 0.4s ease forwards; }
+    [data-priority="urgent"] { box-shadow: inset 3px 0 0 rgb(var(--c-accent)); }
+    [data-priority="high"] { box-shadow: inset 3px 0 0 #fbb04a; }
+    [data-priority="medium"] { box-shadow: inset 3px 0 0 rgb(var(--c-text-3)); }
+    [data-priority="low"] { box-shadow: inset 3px 0 0 rgb(var(--c-edge)); }
+    .kanban-col.drag-over { background: rgb(var(--c-accent) / 0.06); border-color: rgb(var(--c-accent) / 0.4); }
+    .task-drag { opacity: 0.5; }
+    .mention { color: rgb(var(--c-accent)); font-weight: 500; background: rgb(var(--c-accent) / 0.1); padding: 0 4px; border-radius: 3px; }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgb(var(--c-sunken));
+      border: 1px solid rgb(var(--c-edge));
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; color: rgb(var(--c-text-2));
+    }
+  </style>
+</head>
+<body>
+  <div class="grain"></div>
+  <div id="root"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.4",
+        "lucide-react": "https://esm.sh/lucide-react@0.453.0?deps=react@18.3.1"
+      }
+    }
+  </script>
+  <script type="module">
+    import React, { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { createClient } from '@supabase/supabase-js';
+    import {
+      LogOut, Plus, Users, CheckSquare, Settings, X, Check, AlertCircle,
+      MessageSquare, Calendar, Flag, UserPlus, Copy, Trash2, Send, Crown,
+      User as UserIcon, ArrowRight, Loader2, Eye, EyeOff, ShieldCheck, Hourglass,
+      LayoutGrid, List, Inbox, Sun, Moon, Languages, BarChart3, Search, Filter,
+      Play, Square, Clock, Repeat, Tag, ListChecks, ChevronDown, AtSign, GripVertical
+    } from 'lucide-react';
+
+    // ============================================================
+    // SUPABASE CONFIG
+    // ============================================================
+    const SUPABASE_URL = 'https://hklmkpjccrmlqyypvkar.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ONb39yuLFABaaX0a_3Bg7A_ZKyjMB5p';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const h = React.createElement;
+
+    // ============================================================
+    // I18N
+    // ============================================================
+    const translations = {
+      az: {
+        appTagline: 'Komandanızı bir araya gətirin.',
+        appDesc: 'Tapşırıqları izləyin, mərhələlər təyin edin və rəhbərin təsdiqi ilə hər addımı kontrol altında saxlayın.',
+        kanban: 'Kanban', approvals: 'Təsdiqlər', members: 'Üzvlər', settings: 'Tənzimləmələr',
+        reports: 'Hesabatlar', tasks: 'Tapşırıqlar',
+        welcomeBack: 'Yenidən xoş gəldiniz', createAccount: 'Hesab yaradın',
+        loginSubtitle: 'Hesabınıza daxil olun', signupSubtitle: 'Komandanıza qoşulun və ya yenisini yaradın',
+        fullName: 'Tam ad', username: 'İstifadəçi adı', email: 'E-poçt', password: 'Şifrə',
+        login: 'Daxil ol', signup: 'Qeydiyyat', noAccount: 'Hesabınız yoxdur?',
+        hasAccount: 'Hesabınız var?', signupHere: 'Qeydiyyatdan keçin', loginHere: 'Daxil olun',
+        usernameHint: 'Yalnız hərflər, rəqəmlər və _',
+        hello: 'Salam', getStarted: 'Başlamaq üçün yeni komanda yaradın və ya mövcuduna qoşulun',
+        createTeam: 'Yeni komanda yarat', joinTeam: 'Komandaya qoşul',
+        createTeamDesc: 'Siz avtomatik olaraq rəhbər olacaqsınız',
+        joinTeamDesc: 'Komanda kodu ilə işçi olaraq qoşulun',
+        teamName: 'Komanda adı', description: 'Təsvir', optional: '(məcburi deyil)',
+        teamCode: 'Komanda kodu', back: 'Geri', create: 'Yarat', join: 'Qoşul',
+        cancel: 'Ləğv et', save: 'Yadda saxla', delete: 'Sil', confirm: 'Təsdiq et', reject: 'Rədd et',
+        newTask: 'Yeni task', noTasks: 'Hələ task yoxdur', noTasksDesc: 'Komandanız üçün ilk tapşırığı yaradın',
+        title: 'Başlıq', priority: 'Prioritet', assignee: 'Təyin edilən şəxs',
+        startDate: 'Başlanğıc tarix', dueDate: 'Bitmə tarixi', estimated: 'Təxmini saat',
+        tags: 'Etiketlər', tagsPlaceholder: 'Enter düyməsi ilə əlavə edin',
+        status: 'Status', recurrence: 'Təkrarlanma', noRepeat: 'Təkrarlanmasın',
+        daily: 'Günlük', weekly: 'Həftəlik', monthly: 'Aylıq', every: 'hər',
+        leader: 'Rəhbər', worker: 'İşçi',
+        statusTodo: 'Görüləcək', statusInProgress: 'İşdə', statusInReview: 'Yoxlamada', statusDone: 'Tamamlandı',
+        priorityLow: 'Aşağı', priorityMedium: 'Orta', priorityHigh: 'Yüksək', priorityUrgent: 'Təcili',
+        searchTasks: 'Taskları axtar...', filter: 'Filtr', clearFilters: 'Filtrləri təmizlə',
+        allStatuses: 'Bütün statuslar', allPriorities: 'Bütün prioritetlər', allAssignees: 'Hamısı',
+        unassigned: 'Təyin edilməyib', noone: 'Heç kim', you: 'siz',
+        statusChange: 'Status dəyişikliyi', requiresApproval: 'Rəhbər təsdiqi tələb olunur',
+        awaitingApproval: 'Təsdiq gözlənilir', withdraw: 'Geri çək',
+        sendForApproval: 'Təsdiq üçün göndər', whyChange: 'Niyə bu statusa keçirilməlidir? (məcburi deyil)',
+        comments: 'Şərhlər', chat: 'Söhbət', noComments: 'Hələ şərh yoxdur',
+        addComment: 'Şərh əlavə edin... (@ ilə mention)',
+        checklist: 'Yoxlama siyahısı', addChecklistItem: 'Yeni element əlavə et...',
+        timeTracking: 'Vaxt izləmə', startTimer: 'Başlat', stopTimer: 'Dayandır',
+        totalTime: 'Ümumi vaxt', currentlyTracking: 'Hazırda izlənir',
+        membersCount: 'üzv', inviteCode: 'Dəvət kodu', copyCode: 'Kodu kopyala',
+        makeWorker: 'İşçi et', makeLeader: 'Rəhbər et', remove: 'Çıxar',
+        teamSettings: 'Komanda məlumatları', dangerZone: 'Təhlükəli zona',
+        deleteTeam: 'Komandanı sil', deleteTeamDesc: 'Bütün tasklar, şərhlər və təsdiq sorğuları silinəcək.',
+        deleteTeamConfirm: 'Komandanı silmək geri qaytarıla bilməz. Davam edək?',
+        pending: 'Gözləyən', history: 'Tarixçə', noApprovals: 'Təsdiq sorğuları yoxdur',
+        noApprovalsDesc: 'Status dəyişikliyi sorğuları burada görünəcək',
+        approved: 'Təsdiqləndi', rejected: 'Rədd edildi', awaitingLeader: 'Rəhbərin cavabı gözlənilir',
+        wantsToMove: 'tapşırıq statusunu dəyişməyi xahiş edir',
+        whyReject: 'Niyə rədd edirsiniz? (məcburi deyil)',
+        tasksByStatus: 'Status üzrə tasklar', tasksByPriority: 'Prioritet üzrə tasklar',
+        tasksByAssignee: 'İcraçı üzrə tasklar', completionTrend: 'Tamamlanma trendi (son 30 gün)',
+        timeByMember: 'Üzv üzrə vaxt sərfi', totalTasks: 'Ümumi task',
+        completedTasks: 'Tamamlanmış', overdueTasks: 'Vaxtı keçmiş', activeTasks: 'Aktiv',
+        loading: 'Yüklənir...', noData: 'Məlumat yoxdur',
+        configRequired: 'Konfiqurasiya tələb olunur',
+        configRequiredDesc: 'NextTaskX işləməsi üçün Supabase URL və Anon Key təyin edilməlidir.',
+        completeProfile: 'Profili tamamlayın', continueBtn: 'Davam et',
+        editTask: 'Redaktə', deleteTask: 'Tapşırığı sil',
+        confirmDeleteTask: 'Bu tapşırığı silmək istədiyinizdən əminsiniz?',
+        confirmRemoveMember: 'Bu üzvü çıxarmaq istədiyinizdən əminsiniz?',
+        created: 'Yaradan', mins: 'dəq', hrs: 'saat',
+        light: 'Açıq', dark: 'Tünd', lang_az: 'Azərbaycan', lang_en: 'English',
+        footer: 'Created by Abulfaz Mustafazade',
+      },
+      en: {
+        appTagline: 'Bring your team together.',
+        appDesc: 'Track tasks, assign milestones and keep every step under control with leader approval.',
+        kanban: 'Kanban', approvals: 'Approvals', members: 'Members', settings: 'Settings',
+        reports: 'Reports', tasks: 'Tasks',
+        welcomeBack: 'Welcome back', createAccount: 'Create account',
+        loginSubtitle: 'Sign in to your account', signupSubtitle: 'Join your team or create a new one',
+        fullName: 'Full name', username: 'Username', email: 'Email', password: 'Password',
+        login: 'Sign in', signup: 'Sign up', noAccount: "Don't have an account?",
+        hasAccount: 'Already have an account?', signupHere: 'Sign up', loginHere: 'Sign in',
+        usernameHint: 'Only letters, numbers and _',
+        hello: 'Hi', getStarted: 'Start by creating a new team or joining an existing one',
+        createTeam: 'Create new team', joinTeam: 'Join a team',
+        createTeamDesc: 'You will automatically be the leader',
+        joinTeamDesc: 'Join as a worker using a team code',
+        teamName: 'Team name', description: 'Description', optional: '(optional)',
+        teamCode: 'Team code', back: 'Back', create: 'Create', join: 'Join',
+        cancel: 'Cancel', save: 'Save', delete: 'Delete', confirm: 'Approve', reject: 'Reject',
+        newTask: 'New task', noTasks: 'No tasks yet', noTasksDesc: 'Create the first task for your team',
+        title: 'Title', priority: 'Priority', assignee: 'Assignee',
+        startDate: 'Start date', dueDate: 'Due date', estimated: 'Est. hours',
+        tags: 'Tags', tagsPlaceholder: 'Press Enter to add',
+        status: 'Status', recurrence: 'Recurrence', noRepeat: 'No repeat',
+        daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', every: 'every',
+        leader: 'Leader', worker: 'Worker',
+        statusTodo: 'To do', statusInProgress: 'In progress', statusInReview: 'In review', statusDone: 'Done',
+        priorityLow: 'Low', priorityMedium: 'Medium', priorityHigh: 'High', priorityUrgent: 'Urgent',
+        searchTasks: 'Search tasks...', filter: 'Filter', clearFilters: 'Clear filters',
+        allStatuses: 'All statuses', allPriorities: 'All priorities', allAssignees: 'Everyone',
+        unassigned: 'Unassigned', noone: 'No one', you: 'you',
+        statusChange: 'Status change', requiresApproval: 'Leader approval required',
+        awaitingApproval: 'Awaiting approval', withdraw: 'Withdraw',
+        sendForApproval: 'Send for approval', whyChange: 'Why move to this status? (optional)',
+        comments: 'Comments', chat: 'Chat', noComments: 'No comments yet',
+        addComment: 'Add comment... (use @ to mention)',
+        checklist: 'Checklist', addChecklistItem: 'Add new item...',
+        timeTracking: 'Time tracking', startTimer: 'Start', stopTimer: 'Stop',
+        totalTime: 'Total time', currentlyTracking: 'Currently tracking',
+        membersCount: 'members', inviteCode: 'Invite code', copyCode: 'Copy code',
+        makeWorker: 'Make worker', makeLeader: 'Make leader', remove: 'Remove',
+        teamSettings: 'Team settings', dangerZone: 'Danger zone',
+        deleteTeam: 'Delete team', deleteTeamDesc: 'All tasks, comments and approval requests will be deleted.',
+        deleteTeamConfirm: 'Deleting team cannot be undone. Continue?',
+        pending: 'Pending', history: 'History', noApprovals: 'No approval requests',
+        noApprovalsDesc: 'Status change requests will appear here',
+        approved: 'Approved', rejected: 'Rejected', awaitingLeader: "Waiting for leader's response",
+        wantsToMove: 'wants to change task status',
+        whyReject: 'Why reject? (optional)',
+        tasksByStatus: 'Tasks by status', tasksByPriority: 'Tasks by priority',
+        tasksByAssignee: 'Tasks by assignee', completionTrend: 'Completion trend (last 30 days)',
+        timeByMember: 'Time spent by member', totalTasks: 'Total tasks',
+        completedTasks: 'Completed', overdueTasks: 'Overdue', activeTasks: 'Active',
+        loading: 'Loading...', noData: 'No data',
+        configRequired: 'Configuration required',
+        configRequiredDesc: 'NextTaskX requires Supabase URL and Anon Key to be configured.',
+        completeProfile: 'Complete profile', continueBtn: 'Continue',
+        editTask: 'Edit', deleteTask: 'Delete task',
+        confirmDeleteTask: 'Are you sure you want to delete this task?',
+        confirmRemoveMember: 'Are you sure you want to remove this member?',
+        created: 'Created by', mins: 'min', hrs: 'h',
+        light: 'Light', dark: 'Dark', lang_az: 'Azərbaycan', lang_en: 'English',
+        footer: 'Created by Abulfaz Mustafazade',
+      }
+    };
+
+    // ============================================================
+    // PREFS CONTEXT (theme + language)
+    // ============================================================
+    const PrefsCtx = createContext(null);
+    function PrefsProvider({ children }) {
+      const [theme, setTheme] = useState(() => localStorage.getItem('ntx-theme') || 'dark');
+      const [lang, setLang] = useState(() => localStorage.getItem('ntx-lang') || 'az');
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('ntx-theme', theme);
+      }, [theme]);
+      useEffect(() => {
+        document.documentElement.setAttribute('lang', lang);
+        localStorage.setItem('ntx-lang', lang);
+      }, [lang]);
+      const t = useCallback((key) => translations[lang][key] || key, [lang]);
+      return h(PrefsCtx.Provider, { value: { theme, setTheme, lang, setLang, t } }, children);
+    }
+    const usePrefs = () => useContext(PrefsCtx);
+
+    // ============================================================
+    // UTILITIES
+    // ============================================================
+    const cn = (...c) => c.filter(Boolean).join(' ');
+    const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+    const formatDate = (d, lang = 'az') => {
+      if (!d) return null;
+      return new Date(d).toLocaleDateString(lang === 'az' ? 'az-AZ' : 'en-US', { day: '2-digit', month: 'short' });
+    };
+    const formatDateTime = (d, lang = 'az') => {
+      if (!d) return '';
+      return new Date(d).toLocaleString(lang === 'az' ? 'az-AZ' : 'en-US');
+    };
+    const initials = (name) => (name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const colorFor = (id) => {
+      const colors = ['ember', 'emerald', 'sky', 'violet', 'rose', 'cyan'];
+      const idx = (id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+      return colors[idx];
+    };
+    const avatarBg = {
+      ember: 'bg-orange-500 text-white',
+      emerald: 'bg-emerald-600 text-white',
+      sky: 'bg-sky-600 text-white',
+      violet: 'bg-violet-600 text-white',
+      rose: 'bg-rose-600 text-white',
+      cyan: 'bg-cyan-600 text-white',
+    };
+    const formatDuration = (seconds) => {
+      if (!seconds || seconds < 0) return '0m';
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      if (h === 0) return `${m}m`;
+      return `${h}h ${m}m`;
+    };
+    const parseMentions = (text, members) => {
+      const ids = [];
+      const re = /@(\w+)/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const u = members.find(mb => mb.username === m[1]);
+        if (u && !ids.includes(u.id)) ids.push(u.id);
+      }
+      return ids;
+    };
+    const renderWithMentions = (text, members) => {
+      const parts = [];
+      const re = /(@\w+)/g;
+      let lastIdx = 0;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        if (m.index > lastIdx) parts.push(text.slice(lastIdx, m.index));
+        const uname = m[0].slice(1);
+        const u = members.find(mb => mb.username === uname);
+        if (u) parts.push(h('span', { key: m.index, className: 'mention' }, m[0]));
+        else parts.push(m[0]);
+        lastIdx = m.index + m[0].length;
+      }
+      if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+      return parts;
+    };
+    // ============================================================
+    // AUTH CONTEXT
+    // ============================================================
+    const AuthCtx = createContext(null);
+    function AuthProvider({ children }) {
+      const [session, setSession] = useState(null);
+      const [profile, setProfile] = useState(null);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session);
+          if (session) loadProfile(session.user.id);
+          else setLoading(false);
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+          setSession(s);
+          if (s) loadProfile(s.user.id);
+          else { setProfile(null); setLoading(false); }
+        });
+        return () => subscription.unsubscribe();
+      }, []);
+
+      const loadProfile = async (userId) => {
+        const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        setProfile(data);
+        setLoading(false);
+      };
+      const refreshProfile = () => session && loadProfile(session.user.id);
+      const signOut = async () => { await supabase.auth.signOut(); };
+
+      return h(AuthCtx.Provider, { value: { session, profile, loading, signOut, refreshProfile } }, children);
+    }
+    const useAuth = () => useContext(AuthCtx);
+
+    // ============================================================
+    // PRIMITIVES
+    // ============================================================
+    function Button({ children, variant = 'primary', size = 'md', className, ...props }) {
+      const variants = {
+        primary: 'bg-accent hover:bg-accentH text-white font-medium',
+        secondary: 'bg-elev hover:bg-sunken text-ctext border border-edge',
+        ghost: 'hover:bg-elev text-ctext',
+        danger: 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30',
+        outline: 'border border-edge hover:bg-elev text-ctext',
+      };
+      const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm', lg: 'px-5 py-2.5 text-sm' };
+      return h('button', {
+        className: cn('rounded-md transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed', variants[variant], sizes[size], className),
+        ...props
+      }, children);
+    }
+
+    function Input({ className, ...props }) {
+      return h('input', {
+        className: cn('w-full bg-surface border border-edge rounded-md px-3 py-2 text-sm text-ctext placeholder:text-ctext3 focus:outline-none focus:border-accent transition-colors', className),
+        ...props
+      });
+    }
+    function Textarea({ className, ...props }) {
+      return h('textarea', {
+        className: cn('w-full bg-surface border border-edge rounded-md px-3 py-2 text-sm text-ctext placeholder:text-ctext3 focus:outline-none focus:border-accent transition-colors resize-none', className),
+        ...props
+      });
+    }
+    function Select({ className, children, ...props }) {
+      return h('select', {
+        className: cn('w-full bg-surface border border-edge rounded-md px-3 py-2 text-sm text-ctext focus:outline-none focus:border-accent', className),
+        ...props
+      }, children);
+    }
+    function Label({ children, className }) {
+      return h('label', { className: cn('block text-xs uppercase tracking-wider text-ctext3 mb-1.5 font-medium', className) }, children);
+    }
+    function Badge({ children, variant = 'default', className }) {
+      const variants = {
+        default: 'bg-sunken text-ctext2 border-edge',
+        ember: 'bg-accent/15 text-accent border-accent/30',
+        leader: 'bg-violet-500/15 text-violet-500 border-violet-500/30',
+        worker: 'bg-sky-500/15 text-sky-500 border-sky-500/30',
+        pending: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+        approved: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+        rejected: 'bg-red-500/15 text-red-500 border-red-500/30',
+      };
+      return h('span', { className: cn('inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border font-medium', variants[variant], className) }, children);
+    }
+    function Avatar({ user, size = 'md' }) {
+      const sizes = { xs: 'w-5 h-5 text-[9px]', sm: 'w-6 h-6 text-[10px]', md: 'w-8 h-8 text-xs', lg: 'w-10 h-10 text-sm' };
+      const color = colorFor(user?.id || user?.username || 'x');
+      return h('div', {
+        className: cn('rounded-full inline-flex items-center justify-center font-semibold flex-shrink-0', sizes[size], avatarBg[color]),
+        title: user?.full_name || user?.username
+      }, initials(user?.full_name || user?.username));
+    }
+    function Modal({ open, onClose, children, size = 'md' }) {
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => e.key === 'Escape' && onClose();
+        document.addEventListener('keydown', handler);
+        document.body.style.overflow = 'hidden';
+        return () => { document.removeEventListener('keydown', handler); document.body.style.overflow = ''; };
+      }, [open, onClose]);
+      if (!open) return null;
+      const sizes = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
+      return h('div', {
+        className: 'fixed inset-0 z-50 bg-base/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto',
+        onClick: onClose
+      }, h('div', {
+        className: cn('w-full bg-surface border border-edge rounded-lg shadow-2xl mt-16 fade-up', sizes[size]),
+        onClick: (e) => e.stopPropagation()
+      }, children));
+    }
+    function Spinner({ className }) {
+      return h(Loader2, { className: cn('animate-spin', className) });
+    }
+
+    // Theme + Language toggle (icon buttons)
+    function PrefsToggle() {
+      const { theme, setTheme, lang, setLang, t } = usePrefs();
+      const [open, setOpen] = useState(false);
+      useEffect(() => {
+        if (!open) return;
+        const h = () => setOpen(false);
+        setTimeout(() => document.addEventListener('click', h), 0);
+        return () => document.removeEventListener('click', h);
+      }, [open]);
+      return h('div', { className: 'flex items-center gap-1' },
+        h('button', {
+          onClick: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          className: 'p-1.5 rounded-md hover:bg-elev text-ctext2 hover:text-ctext',
+          title: theme === 'dark' ? t('light') : t('dark')
+        }, theme === 'dark' ? h(Sun, { className: 'w-4 h-4' }) : h(Moon, { className: 'w-4 h-4' })),
+        h('div', { className: 'relative' },
+          h('button', {
+            onClick: (e) => { e.stopPropagation(); setOpen(!open); },
+            className: 'p-1.5 rounded-md hover:bg-elev text-ctext2 hover:text-ctext flex items-center gap-0.5',
+            title: 'Language'
+          }, h(Languages, { className: 'w-4 h-4' }),
+            h('span', { className: 'text-[10px] font-mono uppercase' }, lang)
+          ),
+          open && h('div', { className: 'absolute right-0 top-full mt-1 bg-surface border border-edge rounded-md shadow-lg z-50 min-w-[140px] overflow-hidden' },
+            ['az', 'en'].map(L => h('button', {
+              key: L,
+              onClick: () => { setLang(L); setOpen(false); },
+              className: cn('w-full text-left px-3 py-2 text-sm hover:bg-elev flex items-center justify-between', lang === L && 'text-accent')
+            }, t('lang_' + L), lang === L && h(Check, { className: 'w-3.5 h-3.5' })))
+          )
+        )
+      );
+    }
+    // ============================================================
+    // AUTH PAGE
+    // ============================================================
+    function AuthPage() {
+      const { t } = usePrefs();
+      const [mode, setMode] = useState('login');
+      const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+      const [fullName, setFullName] = useState(''); const [username, setUsername] = useState('');
+      const [showPw, setShowPw] = useState(false);
+      const [err, setErr] = useState(''); const [loading, setLoading] = useState(false);
+
+      const submit = async (e) => {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          if (mode === 'login') {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+          } else {
+            if (!fullName.trim() || !username.trim()) throw new Error('Required fields');
+            const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+            const { data: existing } = await supabase.from('profiles').select('id').eq('username', clean).maybeSingle();
+            if (existing) throw new Error('Username already exists');
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) throw error;
+            if (data.user) {
+              const { error: pErr } = await supabase.from('profiles').insert({ id: data.user.id, full_name: fullName, username: clean });
+              if (pErr) throw pErr;
+            }
+          }
+        } catch (e) { setErr(e.message); } finally { setLoading(false); }
+      };
+
+      return h('div', { className: 'min-h-screen flex relative' },
+        h('div', { className: 'hidden lg:flex lg:w-1/2 bg-surface border-r border-edge p-12 flex-col justify-between relative overflow-hidden' },
+          h('div', { className: 'absolute -top-40 -right-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl' }),
+          h('div', { className: 'absolute -bottom-40 -left-40 w-96 h-96 bg-accent/5 rounded-full blur-3xl' }),
+          h('div', { className: 'relative flex items-center justify-between' },
+            h('div', { className: 'flex items-center gap-2.5' },
+              h('div', { className: 'w-9 h-9 bg-accent rounded-md flex items-center justify-center' },
+                h('div', { className: 'w-3 h-3 bg-base rounded-sm' })
+              ),
+              h('span', { className: 'text-xl font-semibold tracking-tight' }, 'NextTaskX')
+            ),
+            h(PrefsToggle)
+          ),
+          h('div', { className: 'relative max-w-md' },
+            h('h1', { className: 'text-5xl font-serif-italic text-ctext leading-tight mb-4' }, t('appTagline')),
+            h('p', { className: 'text-ctext2 leading-relaxed' }, t('appDesc'))
+          ),
+          h('div', { className: 'relative flex items-center gap-6 text-xs text-ctext3' },
+            h('div', { className: 'flex items-center gap-1.5' }, h(LayoutGrid, { className: 'w-3.5 h-3.5' }), t('kanban')),
+            h('div', { className: 'flex items-center gap-1.5' }, h(ShieldCheck, { className: 'w-3.5 h-3.5' }), t('approvals')),
+            h('div', { className: 'flex items-center gap-1.5' }, h(BarChart3, { className: 'w-3.5 h-3.5' }), t('reports'))
+          )
+        ),
+        h('div', { className: 'flex-1 flex items-center justify-center p-8 relative' },
+          h('div', { className: 'absolute top-6 right-6 lg:hidden' }, h(PrefsToggle)),
+          h('div', { className: 'w-full max-w-sm' },
+            h('div', { className: 'lg:hidden flex items-center gap-2.5 mb-10' },
+              h('div', { className: 'w-8 h-8 bg-accent rounded-md flex items-center justify-center' },
+                h('div', { className: 'w-2.5 h-2.5 bg-base rounded-sm' })
+              ),
+              h('span', { className: 'text-lg font-semibold' }, 'NextTaskX')
+            ),
+            h('div', { className: 'mb-8' },
+              h('h2', { className: 'text-3xl font-serif-italic mb-2' }, mode === 'login' ? t('welcomeBack') : t('createAccount')),
+              h('p', { className: 'text-sm text-ctext2' }, mode === 'login' ? t('loginSubtitle') : t('signupSubtitle'))
+            ),
+            h('form', { onSubmit: submit, className: 'space-y-4' },
+              mode === 'signup' && h('div', null,
+                h(Label, null, t('fullName')),
+                h(Input, { value: fullName, onChange: e => setFullName(e.target.value), required: true })
+              ),
+              mode === 'signup' && h('div', null,
+                h(Label, null, t('username')),
+                h(Input, { value: username, onChange: e => setUsername(e.target.value), required: true }),
+                h('p', { className: 'text-xs text-ctext3 mt-1' }, t('usernameHint'))
+              ),
+              h('div', null, h(Label, null, t('email')),
+                h(Input, { type: 'email', value: email, onChange: e => setEmail(e.target.value), required: true })),
+              h('div', null, h(Label, null, t('password')),
+                h('div', { className: 'relative' },
+                  h(Input, { type: showPw ? 'text' : 'password', value: password, onChange: e => setPassword(e.target.value), required: true, minLength: 6 }),
+                  h('button', { type: 'button', onClick: () => setShowPw(!showPw), className: 'absolute right-3 top-1/2 -translate-y-1/2 text-ctext3 hover:text-ctext' },
+                    showPw ? h(EyeOff, { className: 'w-4 h-4' }) : h(Eye, { className: 'w-4 h-4' })
+                  )
+                )
+              ),
+              err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+              h(Button, { type: 'submit', size: 'lg', className: 'w-full justify-center', disabled: loading },
+                loading && h(Spinner, { className: 'w-4 h-4' }),
+                mode === 'login' ? t('login') : t('signup'),
+                !loading && h(ArrowRight, { className: 'w-4 h-4' })
+              )
+            ),
+            h('div', { className: 'mt-6 text-center text-sm text-ctext2' },
+              mode === 'login' ? t('noAccount') + ' ' : t('hasAccount') + ' ',
+              h('button', { onClick: () => { setMode(mode === 'login' ? 'signup' : 'login'); setErr(''); }, className: 'text-accent hover:text-accentH font-medium' },
+                mode === 'login' ? t('signupHere') : t('loginHere'))
+            )
+          )
+        )
+      );
+    }
+
+    // ============================================================
+    // ONBOARDING
+    // ============================================================
+    function Onboarding({ onDone }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [mode, setMode] = useState(null);
+      const [name, setName] = useState(''); const [desc, setDesc] = useState(''); const [code, setCode] = useState('');
+      const [err, setErr] = useState(''); const [loading, setLoading] = useState(false);
+
+      const createTeam = async (e) => {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          const { data, error } = await supabase.from('teams').insert({
+            name, description: desc, team_code: generateCode(), created_by: profile.id
+          }).select().single();
+          if (error) throw error;
+          onDone(data.id);
+        } catch (e) { setErr(e.message); } finally { setLoading(false); }
+      };
+      const joinTeam = async (e) => {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          const { data: team, error } = await supabase.from('teams').select('id').eq('team_code', code.toUpperCase()).maybeSingle();
+          if (error) throw error;
+          if (!team) throw new Error('Team not found');
+          const { error: mErr } = await supabase.from('team_members').insert({ team_id: team.id, user_id: profile.id, role: 'worker' });
+          if (mErr) { if (mErr.code === '23505') throw new Error('Already a member'); throw mErr; }
+          onDone(team.id);
+        } catch (e) { setErr(e.message); } finally { setLoading(false); }
+      };
+
+      return h('div', { className: 'min-h-screen flex items-center justify-center p-6 relative' },
+        h('div', { className: 'absolute top-6 right-6' }, h(PrefsToggle)),
+        h('div', { className: 'w-full max-w-xl' },
+          h('div', { className: 'text-center mb-10' },
+            h('h1', { className: 'text-4xl font-serif-italic mb-3' }, t('hello'), ', ',
+              h('span', { className: 'text-accent' }, profile?.full_name?.split(' ')[0] || profile?.username)
+            ),
+            h('p', { className: 'text-ctext2' }, t('getStarted'))
+          ),
+          !mode && h('div', { className: 'grid md:grid-cols-2 gap-4' },
+            h('button', { onClick: () => setMode('create'), className: 'group bg-surface border border-edge hover:border-accent/50 rounded-lg p-6 text-left transition-all' },
+              h('div', { className: 'w-10 h-10 rounded-md bg-accent/10 border border-accent/20 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors' },
+                h(Plus, { className: 'w-5 h-5 text-accent' })
+              ),
+              h('h3', { className: 'font-semibold mb-1.5' }, t('createTeam')),
+              h('p', { className: 'text-sm text-ctext2' }, t('createTeamDesc'))
+            ),
+            h('button', { onClick: () => setMode('join'), className: 'group bg-surface border border-edge hover:border-accent/50 rounded-lg p-6 text-left transition-all' },
+              h('div', { className: 'w-10 h-10 rounded-md bg-accent/10 border border-accent/20 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors' },
+                h(UserPlus, { className: 'w-5 h-5 text-accent' })
+              ),
+              h('h3', { className: 'font-semibold mb-1.5' }, t('joinTeam')),
+              h('p', { className: 'text-sm text-ctext2' }, t('joinTeamDesc'))
+            )
+          ),
+          mode === 'create' && h('form', { onSubmit: createTeam, className: 'bg-surface border border-edge rounded-lg p-6 space-y-4' },
+            h('h3', { className: 'text-lg font-semibold mb-2' }, t('createTeam')),
+            h('div', null, h(Label, null, t('teamName')),
+              h(Input, { value: name, onChange: e => setName(e.target.value), required: true })),
+            h('div', null, h(Label, null, t('description'), ' ', h('span', { className: 'text-ctext3' }, t('optional'))),
+              h(Textarea, { value: desc, onChange: e => setDesc(e.target.value), rows: 3 })),
+            err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+            h('div', { className: 'flex gap-2' },
+              h(Button, { type: 'button', variant: 'ghost', onClick: () => setMode(null) }, t('back')),
+              h(Button, { type: 'submit', disabled: loading, className: 'flex-1 justify-center' },
+                loading && h(Spinner, { className: 'w-4 h-4' }), t('create'))
+            )
+          ),
+          mode === 'join' && h('form', { onSubmit: joinTeam, className: 'bg-surface border border-edge rounded-lg p-6 space-y-4' },
+            h('h3', { className: 'text-lg font-semibold mb-2' }, t('joinTeam')),
+            h('div', null, h(Label, null, t('teamCode')),
+              h(Input, { value: code, onChange: e => setCode(e.target.value.toUpperCase()), className: 'font-mono uppercase', maxLength: 6, required: true })),
+            err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+            h('div', { className: 'flex gap-2' },
+              h(Button, { type: 'button', variant: 'ghost', onClick: () => setMode(null) }, t('back')),
+              h(Button, { type: 'submit', disabled: loading, className: 'flex-1 justify-center' },
+                loading && h(Spinner, { className: 'w-4 h-4' }), t('join'))
+            )
+          )
+        )
+      );
+    }
+    // ============================================================
+    // APP SHELL
+    // ============================================================
+    function AppShell() {
+      const { profile, signOut } = useAuth(); const { t } = usePrefs();
+      const [teams, setTeams] = useState([]);
+      const [activeTeamId, setActiveTeamId] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [showNewTeam, setShowNewTeam] = useState(false);
+
+      const loadTeams = useCallback(async () => {
+        const { data } = await supabase.from('team_members').select('role, teams(*)').eq('user_id', profile.id);
+        const tt = (data || []).map(d => ({ ...d.teams, my_role: d.role })).filter(t => t.id);
+        setTeams(tt);
+        if (!activeTeamId && tt.length > 0) setActiveTeamId(tt[0].id);
+        setLoading(false);
+      }, [profile?.id, activeTeamId]);
+
+      useEffect(() => { if (profile) loadTeams(); }, [profile, loadTeams]);
+
+      if (loading) return h('div', { className: 'min-h-screen flex items-center justify-center' }, h(Spinner, { className: 'w-6 h-6 text-accent' }));
+      if (teams.length === 0) return h(Onboarding, { onDone: (id) => { setActiveTeamId(id); loadTeams(); } });
+
+      const activeTeam = teams.find(t => t.id === activeTeamId);
+
+      return h('div', { className: 'min-h-screen flex flex-col' },
+        h('div', { className: 'flex-1 flex overflow-hidden' },
+          h('aside', { className: 'w-60 bg-surface border-r border-edge flex flex-col flex-shrink-0' },
+            h('div', { className: 'p-4 border-b border-edge flex items-center justify-between' },
+              h('div', { className: 'flex items-center gap-2.5' },
+                h('div', { className: 'w-7 h-7 bg-accent rounded-md flex items-center justify-center flex-shrink-0' },
+                  h('div', { className: 'w-2.5 h-2.5 bg-base rounded-sm' })
+                ),
+                h('span', { className: 'font-semibold tracking-tight' }, 'NextTaskX')
+              ),
+              h(PrefsToggle)
+            ),
+            h('div', { className: 'p-3 flex-1 overflow-y-auto scrollbar-thin' },
+              h('div', { className: 'flex items-center justify-between px-2 mb-2' },
+                h('span', { className: 'text-[10px] uppercase tracking-wider text-ctext3 font-semibold' }, t('members')),
+                h('button', { onClick: () => setShowNewTeam(true), className: 'text-ctext2 hover:text-accent p-0.5' },
+                  h(Plus, { className: 'w-3.5 h-3.5' }))
+              ),
+              h('div', { className: 'space-y-0.5' },
+                teams.map(team => h('button', {
+                  key: team.id, onClick: () => setActiveTeamId(team.id),
+                  className: cn('w-full text-left px-2 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors',
+                    team.id === activeTeamId ? 'bg-elev text-ctext' : 'text-ctext2 hover:bg-elev/50')
+                },
+                  h('div', { className: cn('w-5 h-5 rounded text-[10px] font-semibold flex items-center justify-center flex-shrink-0', avatarBg[colorFor(team.id)]) }, team.name[0].toUpperCase()),
+                  h('span', { className: 'truncate flex-1' }, team.name),
+                  team.my_role === 'leader' && h(Crown, { className: 'w-3 h-3 text-accent flex-shrink-0' })
+                ))
+              )
+            ),
+            h('div', { className: 'p-3 border-t border-edge' },
+              h('div', { className: 'flex items-center gap-2.5 px-2 py-1.5' },
+                h(Avatar, { user: profile, size: 'sm' }),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-sm font-medium truncate' }, profile.full_name),
+                  h('div', { className: 'text-xs text-ctext3 truncate' }, '@', profile.username)
+                ),
+                h('button', { onClick: signOut, className: 'text-ctext2 hover:text-red-500 p-1', title: 'Sign out' },
+                  h(LogOut, { className: 'w-4 h-4' }))
+              )
+            )
+          ),
+          h('main', { className: 'flex-1 overflow-hidden flex flex-col' },
+            activeTeam && h(TeamView, { team: activeTeam, key: activeTeam.id, onTeamUpdate: loadTeams })
+          )
+        ),
+        h('footer', { className: 'border-t border-edge px-6 py-2.5 text-center text-xs text-ctext3 bg-surface' },
+          h('span', { className: 'font-serif-italic' }, t('footer'))
+        ),
+        h(Modal, { open: showNewTeam, onClose: () => setShowNewTeam(false) },
+          h(NewTeamForm, { onClose: () => setShowNewTeam(false), onDone: (id) => { loadTeams(); setActiveTeamId(id); setShowNewTeam(false); } })
+        )
+      );
+    }
+
+    function NewTeamForm({ onClose, onDone }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [mode, setMode] = useState('create');
+      const [name, setName] = useState(''); const [desc, setDesc] = useState(''); const [code, setCode] = useState('');
+      const [err, setErr] = useState(''); const [loading, setLoading] = useState(false);
+
+      const submit = async (e) => {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          if (mode === 'create') {
+            const { data, error } = await supabase.from('teams').insert({
+              name, description: desc, team_code: generateCode(), created_by: profile.id
+            }).select().single();
+            if (error) throw error;
+            onDone(data.id);
+          } else {
+            const { data: team, error } = await supabase.from('teams').select('id').eq('team_code', code.toUpperCase()).maybeSingle();
+            if (error) throw error;
+            if (!team) throw new Error('Not found');
+            const { error: mErr } = await supabase.from('team_members').insert({ team_id: team.id, user_id: profile.id, role: 'worker' });
+            if (mErr) { if (mErr.code === '23505') throw new Error('Already member'); throw mErr; }
+            onDone(team.id);
+          }
+        } catch (e) { setErr(e.message); } finally { setLoading(false); }
+      };
+
+      return h('div', { className: 'p-6' },
+        h('div', { className: 'flex items-center justify-between mb-5' },
+          h('h2', { className: 'text-xl font-semibold' }, mode === 'create' ? t('createTeam') : t('joinTeam')),
+          h('button', { onClick: onClose, className: 'text-ctext2 hover:text-ctext' }, h(X, { className: 'w-5 h-5' }))
+        ),
+        h('div', { className: 'flex gap-1 p-1 bg-sunken rounded-md mb-5' },
+          ['create', 'join'].map(m => h('button', {
+            key: m, type: 'button', onClick: () => setMode(m),
+            className: cn('flex-1 py-1.5 rounded text-sm font-medium transition-colors',
+              mode === m ? 'bg-elev text-ctext' : 'text-ctext2')
+          }, m === 'create' ? t('create') : t('join')))
+        ),
+        h('form', { onSubmit: submit, className: 'space-y-4' },
+          mode === 'create' ? [
+            h('div', { key: 'n' }, h(Label, null, t('teamName')), h(Input, { value: name, onChange: e => setName(e.target.value), required: true })),
+            h('div', { key: 'd' }, h(Label, null, t('description')), h(Textarea, { value: desc, onChange: e => setDesc(e.target.value), rows: 3 }))
+          ] : [
+            h('div', { key: 'c' }, h(Label, null, t('teamCode')),
+              h(Input, { value: code, onChange: e => setCode(e.target.value.toUpperCase()), className: 'font-mono uppercase', maxLength: 6, required: true }))
+          ],
+          err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+          h('div', { className: 'flex justify-end gap-2 pt-2' },
+            h(Button, { type: 'button', variant: 'ghost', onClick: onClose }, t('cancel')),
+            h(Button, { type: 'submit', disabled: loading },
+              loading && h(Spinner, { className: 'w-4 h-4' }), mode === 'create' ? t('create') : t('join'))
+          )
+        )
+      );
+    }
+
+    // ============================================================
+    // CONSTANTS
+    // ============================================================
+    const STATUSES = [
+      { id: 'todo', tk: 'statusTodo', color: 'gray-400' },
+      { id: 'in_progress', tk: 'statusInProgress', color: 'sky-500' },
+      { id: 'in_review', tk: 'statusInReview', color: 'amber-500' },
+      { id: 'done', tk: 'statusDone', color: 'emerald-500' },
+    ];
+    const PRIORITIES = [
+      { id: 'low', tk: 'priorityLow' }, { id: 'medium', tk: 'priorityMedium' },
+      { id: 'high', tk: 'priorityHigh' }, { id: 'urgent', tk: 'priorityUrgent' }
+    ];
+    // ============================================================
+    // TEAM VIEW
+    // ============================================================
+    function TeamView({ team, onTeamUpdate }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [tab, setTab] = useState('tasks');
+      const [view, setView] = useState('kanban');
+      const [tasks, setTasks] = useState([]); const [members, setMembers] = useState([]);
+      const [approvals, setApprovals] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [newTaskOpen, setNewTaskOpen] = useState(false);
+      const [editingTask, setEditingTask] = useState(null);
+      // Filters
+      const [search, setSearch] = useState('');
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [filterPriority, setFilterPriority] = useState('all');
+      const [filterAssignee, setFilterAssignee] = useState('all');
+      const [filterTag, setFilterTag] = useState('');
+      const isLeader = team.my_role === 'leader';
+
+      const loadData = useCallback(async () => {
+        setLoading(true);
+        const [tasksRes, membersRes, approvalsRes] = await Promise.all([
+          supabase.from('tasks').select('*').eq('team_id', team.id).order('position').order('created_at', { ascending: false }),
+          supabase.from('team_members').select('role, joined_at, profiles(*)').eq('team_id', team.id),
+          supabase.from('task_approval_requests').select('*, tasks(title), profiles!task_approval_requests_requested_by_fkey(*)').eq('team_id', team.id).order('created_at', { ascending: false })
+        ]);
+        setTasks(tasksRes.data || []);
+        setMembers((membersRes.data || []).filter(m => m.profiles).map(m => ({ ...m.profiles, role: m.role, joined_at: m.joined_at })));
+        setApprovals(approvalsRes.data || []);
+        setLoading(false);
+      }, [team.id]);
+
+      useEffect(() => { loadData(); }, [loadData]);
+
+      useEffect(() => {
+        const channel = supabase.channel(`team-${team.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `team_id=eq.${team.id}` }, loadData)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_approval_requests', filter: `team_id=eq.${team.id}` }, loadData)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members', filter: `team_id=eq.${team.id}` }, loadData)
+          .subscribe();
+        return () => { supabase.removeChannel(channel); };
+      }, [team.id, loadData]);
+
+      const filteredTasks = useMemo(() => {
+        return tasks.filter(task => {
+          if (search && !task.title.toLowerCase().includes(search.toLowerCase()) && !(task.description || '').toLowerCase().includes(search.toLowerCase())) return false;
+          if (filterStatus !== 'all' && task.status !== filterStatus) return false;
+          if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+          if (filterAssignee !== 'all') {
+            if (filterAssignee === 'unassigned' && task.assignee_id) return false;
+            if (filterAssignee !== 'unassigned' && task.assignee_id !== filterAssignee) return false;
+          }
+          if (filterTag && !(task.tags || []).some(tag => tag.toLowerCase().includes(filterTag.toLowerCase()))) return false;
+          return true;
+        });
+      }, [tasks, search, filterStatus, filterPriority, filterAssignee, filterTag]);
+
+      const allTags = useMemo(() => {
+        const s = new Set();
+        tasks.forEach(t => (t.tags || []).forEach(tag => s.add(tag)));
+        return [...s];
+      }, [tasks]);
+
+      const pendingCount = approvals.filter(a => a.status === 'pending').length;
+      const hasFilters = search || filterStatus !== 'all' || filterPriority !== 'all' || filterAssignee !== 'all' || filterTag;
+
+      return h('div', { className: 'flex flex-col h-full overflow-hidden' },
+        h('div', { className: 'border-b border-edge px-6 py-4 flex items-center justify-between flex-shrink-0 bg-base' },
+          h('div', null,
+            h('div', { className: 'flex items-center gap-3 mb-0.5' },
+              h('h1', { className: 'text-xl font-semibold tracking-tight' }, team.name),
+              isLeader ? h(Badge, { variant: 'leader' }, h(Crown, { className: 'w-2.5 h-2.5' }), t('leader'))
+                : h(Badge, { variant: 'worker' }, h(UserIcon, { className: 'w-2.5 h-2.5' }), t('worker'))
+            ),
+            h('div', { className: 'flex items-center gap-3 text-xs text-ctext2' },
+              h('span', null, members.length, ' ', t('membersCount')),
+              h('span', { className: 'text-edge' }, '•'),
+              h('span', { className: 'font-mono' }, t('teamCode'), ': ', team.team_code),
+              h('button', { onClick: () => navigator.clipboard.writeText(team.team_code), className: 'text-ctext3 hover:text-accent' },
+                h(Copy, { className: 'w-3 h-3' }))
+            )
+          ),
+          tab === 'tasks' && h('div', { className: 'flex items-center gap-2' },
+            h('div', { className: 'flex gap-1 p-0.5 bg-surface border border-edge rounded-md' },
+              h('button', { onClick: () => setView('kanban'), className: cn('p-1.5 rounded transition-colors', view === 'kanban' ? 'bg-elev text-ctext' : 'text-ctext2 hover:text-ctext') },
+                h(LayoutGrid, { className: 'w-4 h-4' })),
+              h('button', { onClick: () => setView('list'), className: cn('p-1.5 rounded transition-colors', view === 'list' ? 'bg-elev text-ctext' : 'text-ctext2 hover:text-ctext') },
+                h(List, { className: 'w-4 h-4' }))
+            ),
+            h(Button, { onClick: () => setNewTaskOpen(true) }, h(Plus, { className: 'w-4 h-4' }), t('newTask'))
+          )
+        ),
+        h('div', { className: 'border-b border-edge px-6 flex gap-1 flex-shrink-0 bg-base' },
+          [
+            { id: 'tasks', label: t('tasks'), icon: CheckSquare },
+            { id: 'approvals', label: t('approvals'), icon: Inbox, badge: pendingCount },
+            { id: 'members', label: t('members'), icon: Users },
+            { id: 'reports', label: t('reports'), icon: BarChart3 },
+            { id: 'settings', label: t('settings'), icon: Settings, hidden: !isLeader },
+          ].filter(t => !t.hidden).map(tt => h('button', {
+            key: tt.id, onClick: () => setTab(tt.id),
+            className: cn('px-3 py-3 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors',
+              tab === tt.id ? 'border-accent text-ctext' : 'border-transparent text-ctext2 hover:text-ctext')
+          },
+            h(tt.icon, { className: 'w-3.5 h-3.5' }), tt.label,
+            tt.badge > 0 && h('span', { className: 'bg-accent text-white text-[10px] font-semibold rounded-full px-1.5 py-0' }, tt.badge)
+          ))
+        ),
+        // Filter bar (only on tasks tab)
+        tab === 'tasks' && h('div', { className: 'border-b border-edge px-6 py-2.5 flex items-center gap-2 flex-wrap bg-surface' },
+          h('div', { className: 'relative flex-1 min-w-[200px] max-w-xs' },
+            h(Search, { className: 'absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ctext3' }),
+            h(Input, { value: search, onChange: e => setSearch(e.target.value), placeholder: t('searchTasks'), className: 'pl-8 py-1.5 text-xs' })
+          ),
+          h(Select, { value: filterStatus, onChange: e => setFilterStatus(e.target.value), className: 'w-auto py-1.5 text-xs' },
+            h('option', { value: 'all' }, t('allStatuses')),
+            STATUSES.map(s => h('option', { key: s.id, value: s.id }, t(s.tk)))
+          ),
+          h(Select, { value: filterPriority, onChange: e => setFilterPriority(e.target.value), className: 'w-auto py-1.5 text-xs' },
+            h('option', { value: 'all' }, t('allPriorities')),
+            PRIORITIES.map(p => h('option', { key: p.id, value: p.id }, t(p.tk)))
+          ),
+          h(Select, { value: filterAssignee, onChange: e => setFilterAssignee(e.target.value), className: 'w-auto py-1.5 text-xs' },
+            h('option', { value: 'all' }, t('allAssignees')),
+            h('option', { value: 'unassigned' }, t('unassigned')),
+            members.map(m => h('option', { key: m.id, value: m.id }, m.full_name))
+          ),
+          allTags.length > 0 && h(Select, { value: filterTag, onChange: e => setFilterTag(e.target.value), className: 'w-auto py-1.5 text-xs' },
+            h('option', { value: '' }, t('tags')),
+            allTags.map(tg => h('option', { key: tg, value: tg }, '#' + tg))
+          ),
+          hasFilters && h('button', { onClick: () => { setSearch(''); setFilterStatus('all'); setFilterPriority('all'); setFilterAssignee('all'); setFilterTag(''); }, className: 'text-xs text-accent hover:underline' },
+            t('clearFilters'))
+        ),
+        h('div', { className: 'flex-1 overflow-auto scrollbar-thin' },
+          loading ? h('div', { className: 'flex items-center justify-center h-full' }, h(Spinner, { className: 'w-6 h-6 text-accent' }))
+            : tab === 'tasks' ? h(TasksTab, { view, tasks: filteredTasks, allTasks: tasks, members, team, isLeader, onEdit: setEditingTask, onChange: loadData })
+            : tab === 'approvals' ? h(ApprovalsTab, { approvals, team, isLeader, onChange: loadData })
+            : tab === 'members' ? h(MembersTab, { members, team, isLeader, onChange: loadData })
+            : tab === 'reports' ? h(ReportsTab, { tasks, members, team })
+            : tab === 'settings' ? h(SettingsTab, { team, onChange: () => { loadData(); onTeamUpdate && onTeamUpdate(); } })
+            : null
+        ),
+        h(Modal, { open: newTaskOpen, onClose: () => setNewTaskOpen(false), size: 'lg' },
+          h(TaskForm, { team, members, onClose: () => setNewTaskOpen(false), onDone: () => { loadData(); setNewTaskOpen(false); } })
+        ),
+        h(Modal, { open: !!editingTask, onClose: () => setEditingTask(null), size: 'xl' },
+          editingTask && h(TaskDetail, { task: editingTask, team, members, isLeader, onClose: () => setEditingTask(null), onChange: () => loadData() })
+        )
+      );
+    }
+
+    // ============================================================
+    // TASKS TAB
+    // ============================================================
+    function TasksTab({ view, tasks, allTasks, members, team, isLeader, onEdit, onChange }) {
+      const { t } = usePrefs();
+      if (allTasks.length === 0) {
+        return h('div', { className: 'p-12 text-center' },
+          h('div', { className: 'inline-flex items-center justify-center w-16 h-16 rounded-full bg-elev mb-4' },
+            h(CheckSquare, { className: 'w-7 h-7 text-ctext3' })
+          ),
+          h('h3', { className: 'text-lg font-semibold mb-1' }, t('noTasks')),
+          h('p', { className: 'text-sm text-ctext2' }, t('noTasksDesc'))
+        );
+      }
+      return view === 'kanban'
+        ? h(KanbanView, { tasks, members, team, isLeader, onEdit, onChange })
+        : h(ListView, { tasks, members, onEdit });
+    }
+
+    // ============================================================
+    // KANBAN with DRAG & DROP
+    // ============================================================
+    function KanbanView({ tasks, members, team, isLeader, onEdit, onChange }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [dragId, setDragId] = useState(null);
+      const [dragOverCol, setDragOverCol] = useState(null);
+      const [dropTarget, setDropTarget] = useState(null); // { task, newStatus }
+      const [reqMsg, setReqMsg] = useState('');
+      const [busy, setBusy] = useState(false);
+
+      const needsApproval = (task, toStatus) => {
+        if (isLeader) return false;
+        const freePairs = [['todo', 'in_progress'], ['in_progress', 'todo']];
+        return !freePairs.some(([a, b]) => task.status === a && toStatus === b);
+      };
+
+      const handleDrop = async (e, newStatus) => {
+        e.preventDefault();
+        setDragOverCol(null);
+        const id = e.dataTransfer.getData('text/plain') || dragId;
+        const task = tasks.find(t => t.id === id);
+        setDragId(null);
+        if (!task || task.status === newStatus) return;
+        if (needsApproval(task, newStatus)) {
+          setDropTarget({ task, newStatus });
+        } else {
+          await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+          onChange();
+        }
+      };
+
+      const submitApprovalReq = async () => {
+        if (!dropTarget) return;
+        setBusy(true);
+        try {
+          await supabase.from('task_approval_requests').insert({
+            task_id: dropTarget.task.id, team_id: team.id, requested_by: profile.id,
+            from_status: dropTarget.task.status, to_status: dropTarget.newStatus,
+            message: reqMsg, status: 'pending'
+          });
+          setDropTarget(null); setReqMsg('');
+          onChange();
+        } finally { setBusy(false); }
+      };
+
+      return h('div', { className: 'p-6 flex gap-4 min-h-full' },
+        STATUSES.map(status => {
+          const colTasks = tasks.filter(tt => tt.status === status.id);
+          return h('div', {
+            key: status.id,
+            className: cn('kanban-col w-72 flex-shrink-0 flex flex-col rounded-lg p-2 border border-transparent transition-colors', dragOverCol === status.id && 'drag-over'),
+            onDragOver: (e) => { e.preventDefault(); setDragOverCol(status.id); },
+            onDragLeave: () => setDragOverCol(null),
+            onDrop: (e) => handleDrop(e, status.id)
+          },
+            h('div', { className: 'flex items-center justify-between mb-3 px-1' },
+              h('div', { className: 'flex items-center gap-2' },
+                h('div', { className: cn('w-2 h-2 rounded-full', `bg-${status.color}`) }),
+                h('h3', { className: 'text-xs font-semibold uppercase tracking-wider' }, t(status.tk)),
+                h('span', { className: 'text-xs text-ctext3 font-mono' }, colTasks.length)
+              )
+            ),
+            h('div', { className: 'space-y-2 flex-1 min-h-[60px]' },
+              colTasks.map(task => h(TaskCard, {
+                key: task.id, task, members, isDragging: dragId === task.id,
+                onDragStart: (e) => { e.dataTransfer.setData('text/plain', task.id); setDragId(task.id); e.dataTransfer.effectAllowed = 'move'; },
+                onDragEnd: () => { setDragId(null); setDragOverCol(null); },
+                onEdit
+              }))
+            )
+          );
+        }),
+        // Approval request modal
+        h(Modal, { open: !!dropTarget, onClose: () => { setDropTarget(null); setReqMsg(''); } },
+          dropTarget && h('div', { className: 'p-6' },
+            h('div', { className: 'flex items-center justify-between mb-4' },
+              h('h3', { className: 'text-lg font-semibold flex items-center gap-2' },
+                h(ShieldCheck, { className: 'w-5 h-5 text-accent' }), t('requiresApproval')),
+              h('button', { onClick: () => setDropTarget(null), className: 'text-ctext2 hover:text-ctext' }, h(X, { className: 'w-5 h-5' }))
+            ),
+            h('p', { className: 'text-sm text-ctext2 mb-1' }, '"', dropTarget.task.title, '"'),
+            h('div', { className: 'flex items-center gap-2 text-xs mb-4' },
+              h(Badge, null, t(STATUSES.find(s => s.id === dropTarget.task.status).tk)),
+              h(ArrowRight, { className: 'w-3 h-3 text-ctext3' }),
+              h(Badge, { variant: 'ember' }, t(STATUSES.find(s => s.id === dropTarget.newStatus).tk))
+            ),
+            h(Textarea, { value: reqMsg, onChange: e => setReqMsg(e.target.value), rows: 2, placeholder: t('whyChange'), className: 'mb-3' }),
+            h('div', { className: 'flex justify-end gap-2' },
+              h(Button, { variant: 'ghost', onClick: () => setDropTarget(null) }, t('cancel')),
+              h(Button, { onClick: submitApprovalReq, disabled: busy },
+                busy && h(Spinner, { className: 'w-4 h-4' }), h(Send, { className: 'w-3.5 h-3.5' }), t('sendForApproval'))
+            )
+          )
+        )
+      );
+    }
+
+    function TaskCard({ task, members, isDragging, onDragStart, onDragEnd, onEdit }) {
+      const { lang } = usePrefs();
+      const assignee = members.find(m => m.id === task.assignee_id);
+      return h('div', {
+        draggable: true,
+        onDragStart, onDragEnd,
+        onClick: () => onEdit(task),
+        'data-priority': task.priority,
+        className: cn('bg-surface border border-edge hover:border-edge/80 rounded-md p-3 cursor-pointer transition-all', isDragging && 'task-drag')
+      },
+        h('div', { className: 'text-sm font-medium text-ctext mb-2 leading-snug' }, task.title),
+        task.description && h('div', { className: 'text-xs text-ctext2 mb-3 line-clamp-2' }, task.description),
+        (task.tags || []).length > 0 && h('div', { className: 'flex flex-wrap gap-1 mb-2' },
+          task.tags.slice(0, 3).map(tag => h('span', { key: tag, className: 'tag-chip' }, '#', tag))
+        ),
+        h('div', { className: 'flex items-center justify-between gap-2' },
+          h('div', { className: 'flex items-center gap-2 text-xs text-ctext3' },
+            (task.start_date || task.due_date) && h('div', { className: 'flex items-center gap-1' },
+              h(Calendar, { className: 'w-3 h-3' }),
+              h('span', null, formatDate(task.due_date || task.start_date, lang))
+            ),
+            task.recurrence && h(Repeat, { className: 'w-3 h-3 text-accent' }),
+            h(PriorityFlag, { priority: task.priority })
+          ),
+          assignee && h(Avatar, { user: assignee, size: 'xs' })
+        )
+      );
+    }
+
+    function PriorityFlag({ priority }) {
+      const { t } = usePrefs();
+      const map = {
+        urgent: { color: 'text-accent', tk: 'priorityUrgent' },
+        high: { color: 'text-amber-500', tk: 'priorityHigh' },
+        medium: { color: 'text-ctext2', tk: 'priorityMedium' },
+        low: { color: 'text-ctext3', tk: 'priorityLow' },
+      };
+      const p = map[priority];
+      return h('div', { className: cn('flex items-center gap-1', p.color), title: t(p.tk) },
+        h(Flag, { className: 'w-3 h-3' })
+      );
+    }
+
+    function ListView({ tasks, members, onEdit }) {
+      const { t, lang } = usePrefs();
+      return h('div', { className: 'p-6' },
+        h('div', { className: 'bg-surface border border-edge rounded-lg overflow-hidden' },
+          h('div', { className: 'grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-edge text-[10px] uppercase tracking-wider text-ctext3 font-semibold' },
+            h('div', { className: 'col-span-4' }, t('title')),
+            h('div', { className: 'col-span-2' }, t('status')),
+            h('div', { className: 'col-span-1' }, t('priority')),
+            h('div', { className: 'col-span-2' }, t('assignee')),
+            h('div', { className: 'col-span-2' }, t('tags')),
+            h('div', { className: 'col-span-1' }, t('dueDate'))
+          ),
+          tasks.map(task => {
+            const assignee = members.find(m => m.id === task.assignee_id);
+            const status = STATUSES.find(s => s.id === task.status);
+            return h('div', {
+              key: task.id, onClick: () => onEdit(task), 'data-priority': task.priority,
+              className: 'grid grid-cols-12 gap-3 px-4 py-3 border-b border-edge last:border-0 hover:bg-elev cursor-pointer items-center'
+            },
+              h('div', { className: 'col-span-4 text-sm font-medium text-ctext truncate' }, task.title),
+              h('div', { className: 'col-span-2' }, h('div', { className: 'flex items-center gap-1.5 text-xs text-ctext2' },
+                h('div', { className: cn('w-1.5 h-1.5 rounded-full', `bg-${status?.color}`) }), t(status?.tk))),
+              h('div', { className: 'col-span-1' }, h(PriorityFlag, { priority: task.priority })),
+              h('div', { className: 'col-span-2' }, assignee ? h('div', { className: 'flex items-center gap-2' },
+                h(Avatar, { user: assignee, size: 'xs' }), h('span', { className: 'text-xs text-ctext2 truncate' }, assignee.full_name)
+              ) : h('span', { className: 'text-xs text-ctext3' }, '—')),
+              h('div', { className: 'col-span-2 flex flex-wrap gap-1' },
+                (task.tags || []).slice(0, 2).map(tg => h('span', { key: tg, className: 'tag-chip' }, '#', tg))
+              ),
+              h('div', { className: 'col-span-1 text-xs text-ctext2' }, formatDate(task.due_date, lang) || '—')
+            );
+          })
+        )
+      );
+    }
+    // ============================================================
+    // TASK FORM (Create)
+    // ============================================================
+    function TaskForm({ team, members, onClose, onDone }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [title, setTitle] = useState('');
+      const [description, setDescription] = useState('');
+      const [status, setStatus] = useState('todo');
+      const [priority, setPriority] = useState('medium');
+      const [assigneeId, setAssigneeId] = useState('');
+      const [startDate, setStartDate] = useState('');
+      const [dueDate, setDueDate] = useState('');
+      const [estimated, setEstimated] = useState('');
+      const [tags, setTags] = useState([]);
+      const [tagInput, setTagInput] = useState('');
+      const [recurType, setRecurType] = useState('none');
+      const [recurInterval, setRecurInterval] = useState(1);
+      const [err, setErr] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const addTag = () => {
+        const v = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (v && !tags.includes(v)) setTags([...tags, v]);
+        setTagInput('');
+      };
+
+      const submit = async (e) => {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          const payload = {
+            team_id: team.id, title, description, status, priority,
+            assignee_id: assigneeId || null,
+            start_date: startDate || null,
+            due_date: dueDate || null,
+            estimated_hours: estimated ? parseFloat(estimated) : null,
+            tags,
+            recurrence: recurType !== 'none' ? { type: recurType, interval: parseInt(recurInterval) || 1 } : null,
+            created_by: profile.id,
+          };
+          const { error } = await supabase.from('tasks').insert(payload);
+          if (error) throw error;
+          onDone();
+        } catch (e) { setErr(e.message); } finally { setLoading(false); }
+      };
+
+      return h('div', { className: 'p-6' },
+        h('div', { className: 'flex items-center justify-between mb-5' },
+          h('h2', { className: 'text-xl font-semibold' }, t('newTask')),
+          h('button', { onClick: onClose, className: 'text-ctext2 hover:text-ctext' }, h(X, { className: 'w-5 h-5' }))
+        ),
+        h('form', { onSubmit: submit, className: 'space-y-4' },
+          h('div', null,
+            h(Label, null, t('title')),
+            h(Input, { value: title, onChange: e => setTitle(e.target.value), required: true, autoFocus: true })
+          ),
+          h('div', null,
+            h(Label, null, t('description')),
+            h(Textarea, { value: description, onChange: e => setDescription(e.target.value), rows: 3 })
+          ),
+          h('div', { className: 'grid grid-cols-2 gap-3' },
+            h('div', null, h(Label, null, t('status')),
+              h(Select, { value: status, onChange: e => setStatus(e.target.value) },
+                STATUSES.map(s => h('option', { key: s.id, value: s.id }, t(s.tk)))
+              )
+            ),
+            h('div', null, h(Label, null, t('priority')),
+              h(Select, { value: priority, onChange: e => setPriority(e.target.value) },
+                PRIORITIES.map(p => h('option', { key: p.id, value: p.id }, t(p.tk)))
+              )
+            )
+          ),
+          h('div', { className: 'grid grid-cols-2 gap-3' },
+            h('div', null, h(Label, null, t('assignee')),
+              h(Select, { value: assigneeId, onChange: e => setAssigneeId(e.target.value) },
+                h('option', { value: '' }, t('noone')),
+                members.map(m => h('option', { key: m.id, value: m.id }, m.full_name))
+              )
+            ),
+            h('div', null, h(Label, null, t('estimated')),
+              h(Input, { type: 'number', step: '0.5', min: '0', value: estimated, onChange: e => setEstimated(e.target.value), placeholder: '0' })
+            )
+          ),
+          h('div', { className: 'grid grid-cols-2 gap-3' },
+            h('div', null, h(Label, null, t('startDate')),
+              h(Input, { type: 'date', value: startDate, onChange: e => setStartDate(e.target.value) })
+            ),
+            h('div', null, h(Label, null, t('dueDate')),
+              h(Input, { type: 'date', value: dueDate, onChange: e => setDueDate(e.target.value) })
+            )
+          ),
+          h('div', null,
+            h(Label, null, t('tags')),
+            h('div', { className: 'flex flex-wrap gap-1.5 mb-2' },
+              tags.map(tag => h('span', { key: tag, className: 'tag-chip' },
+                '#', tag,
+                h('button', { type: 'button', onClick: () => setTags(tags.filter(x => x !== tag)), className: 'ml-1 text-ctext3 hover:text-red-500' },
+                  h(X, { className: 'w-2.5 h-2.5' })
+                )
+              ))
+            ),
+            h(Input, {
+              value: tagInput,
+              onChange: e => setTagInput(e.target.value),
+              onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } },
+              placeholder: t('tagsPlaceholder')
+            })
+          ),
+          h('div', null,
+            h(Label, null, t('recurrence')),
+            h('div', { className: 'flex gap-2' },
+              h(Select, { value: recurType, onChange: e => setRecurType(e.target.value), className: 'flex-1' },
+                h('option', { value: 'none' }, t('noRepeat')),
+                h('option', { value: 'daily' }, t('daily')),
+                h('option', { value: 'weekly' }, t('weekly')),
+                h('option', { value: 'monthly' }, t('monthly'))
+              ),
+              recurType !== 'none' && h('div', { className: 'flex items-center gap-2 text-xs text-ctext2' },
+                t('every'),
+                h(Input, { type: 'number', min: 1, value: recurInterval, onChange: e => setRecurInterval(e.target.value), className: 'w-16 text-center' })
+              )
+            )
+          ),
+          err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+          h('div', { className: 'flex justify-end gap-2 pt-2' },
+            h(Button, { type: 'button', variant: 'ghost', onClick: onClose }, t('cancel')),
+            h(Button, { type: 'submit', disabled: loading },
+              loading && h(Spinner, { className: 'w-4 h-4' }), t('create'))
+          )
+        )
+      );
+    }
+    // ============================================================
+    // TASK DETAIL — with chat, mentions, checklist, time tracking
+    // ============================================================
+    function TaskDetail({ task: initTask, team, members, isLeader, onClose, onChange }) {
+      const { profile } = useAuth(); const { t, lang } = usePrefs();
+      const [task, setTask] = useState(initTask);
+      const [tab, setTab] = useState('chat');
+      const [comments, setComments] = useState([]);
+      const [checklist, setChecklist] = useState([]);
+      const [timeEntries, setTimeEntries] = useState([]);
+      const [activeTimer, setActiveTimer] = useState(null);
+      const [pendingReq, setPendingReq] = useState(null);
+      const [targetStatus, setTargetStatus] = useState(null);
+      const [reqMessage, setReqMessage] = useState('');
+      const [editing, setEditing] = useState(false);
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState('');
+      const [timerTick, setTimerTick] = useState(0);
+
+      const loadAll = useCallback(async () => {
+        const [cRes, rRes, chRes, tRes] = await Promise.all([
+          supabase.from('task_comments').select('*, profiles(*)').eq('task_id', task.id).order('created_at'),
+          supabase.from('task_approval_requests').select('*').eq('task_id', task.id).eq('status', 'pending').maybeSingle(),
+          supabase.from('task_checklist_items').select('*').eq('task_id', task.id).order('position').order('created_at'),
+          supabase.from('task_time_entries').select('*, profiles(*)').eq('task_id', task.id).order('started_at', { ascending: false })
+        ]);
+        setComments(cRes.data || []);
+        setPendingReq(rRes.data || null);
+        setChecklist(chRes.data || []);
+        setTimeEntries(tRes.data || []);
+        setActiveTimer((tRes.data || []).find(e => e.user_id === profile.id && !e.ended_at) || null);
+      }, [task.id, profile.id]);
+
+      useEffect(() => { loadAll(); }, [loadAll]);
+
+      // realtime for this task
+      useEffect(() => {
+        const ch = supabase.channel(`task-${task.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` }, loadAll)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_checklist_items', filter: `task_id=eq.${task.id}` }, loadAll)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_time_entries', filter: `task_id=eq.${task.id}` }, loadAll)
+          .subscribe();
+        return () => supabase.removeChannel(ch);
+      }, [task.id, loadAll]);
+
+      // timer tick
+      useEffect(() => {
+        if (!activeTimer) return;
+        const iv = setInterval(() => setTimerTick(x => x + 1), 1000);
+        return () => clearInterval(iv);
+      }, [activeTimer]);
+
+      const assignee = members.find(m => m.id === task.assignee_id);
+      const creator = members.find(m => m.id === task.created_by);
+      const status = STATUSES.find(s => s.id === task.status);
+
+      const needsApproval = (toStatus) => {
+        if (isLeader) return false;
+        const freePairs = [['todo', 'in_progress'], ['in_progress', 'todo']];
+        return !freePairs.some(([a, b]) => task.status === a && toStatus === b);
+      };
+
+      const directMove = async (newStatus) => {
+        setBusy(true); setErr('');
+        try {
+          const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+          if (error) throw error;
+          setTask({ ...task, status: newStatus });
+          onChange();
+        } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      };
+
+      const requestStatusChange = async (newStatus) => {
+        setBusy(true); setErr('');
+        try {
+          const { error } = await supabase.from('task_approval_requests').insert({
+            task_id: task.id, team_id: team.id, requested_by: profile.id,
+            from_status: task.status, to_status: newStatus,
+            message: reqMessage, status: 'pending'
+          });
+          if (error) throw error;
+          setReqMessage(''); setTargetStatus(null);
+          await loadAll(); onChange();
+        } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      };
+
+      const cancelRequest = async () => {
+        setBusy(true);
+        try {
+          await supabase.from('task_approval_requests').delete().eq('id', pendingReq.id);
+          await loadAll(); onChange();
+        } finally { setBusy(false); }
+      };
+
+      const saveTaskEdit = async (updates) => {
+        setBusy(true);
+        try {
+          const { data, error } = await supabase.from('tasks').update(updates).eq('id', task.id).select().single();
+          if (error) throw error;
+          setTask(data); setEditing(false); onChange();
+        } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      };
+
+      const deleteTask = async () => {
+        if (!confirm(t('confirmDeleteTask'))) return;
+        setBusy(true);
+        try {
+          await supabase.from('tasks').delete().eq('id', task.id);
+          onChange(); onClose();
+        } finally { setBusy(false); }
+      };
+
+      // Time tracking
+      const startTimer = async () => {
+        await supabase.from('task_time_entries').insert({
+          task_id: task.id, team_id: team.id, user_id: profile.id, started_at: new Date().toISOString()
+        });
+        loadAll();
+      };
+      const stopTimer = async () => {
+        if (!activeTimer) return;
+        const end = new Date();
+        const dur = Math.round((end - new Date(activeTimer.started_at)) / 1000);
+        await supabase.from('task_time_entries').update({
+          ended_at: end.toISOString(), duration_seconds: dur
+        }).eq('id', activeTimer.id);
+        loadAll();
+      };
+
+      const totalSeconds = useMemo(() => {
+        const completed = timeEntries.filter(e => e.duration_seconds).reduce((a, e) => a + e.duration_seconds, 0);
+        const live = activeTimer ? Math.round((Date.now() - new Date(activeTimer.started_at)) / 1000) : 0;
+        return completed + live;
+      }, [timeEntries, activeTimer, timerTick]);
+
+      return h('div', { className: 'flex flex-col max-h-[85vh]' },
+        // Header
+        h('div', { className: 'p-6 border-b border-edge flex items-start justify-between gap-4 flex-shrink-0' },
+          h('div', { className: 'flex-1 min-w-0' },
+            editing ? h(EditTaskForm, { task, members, onSave: saveTaskEdit, onCancel: () => setEditing(false), busy })
+              : [
+                h('h2', { key: 't', className: 'text-2xl font-serif-italic mb-2' }, task.title),
+                h('div', { key: 'm', className: 'flex items-center gap-2 flex-wrap text-xs text-ctext2' },
+                  h('div', { className: 'flex items-center gap-1.5' },
+                    h('div', { className: cn('w-1.5 h-1.5 rounded-full', `bg-${status?.color}`) }), t(status?.tk)),
+                  h('span', { className: 'text-edge' }, '•'),
+                  h(PriorityFlag, { priority: task.priority }),
+                  h('span', null, t(PRIORITIES.find(p => p.id === task.priority)?.tk)),
+                  task.start_date && [h('span', { key: 'sd1', className: 'text-edge' }, '•'),
+                    h('div', { key: 'sd2', className: 'flex items-center gap-1' }, h(Calendar, { className: 'w-3 h-3' }),
+                      t('startDate'), ': ', formatDate(task.start_date, lang))],
+                  task.due_date && [h('span', { key: 'd1', className: 'text-edge' }, '•'),
+                    h('div', { key: 'd2', className: 'flex items-center gap-1' }, h(Calendar, { className: 'w-3 h-3' }),
+                      t('dueDate'), ': ', formatDate(task.due_date, lang))],
+                  task.recurrence && [h('span', { key: 'r1', className: 'text-edge' }, '•'),
+                    h('div', { key: 'r2', className: 'flex items-center gap-1 text-accent' },
+                      h(Repeat, { className: 'w-3 h-3' }),
+                      t(task.recurrence.type))],
+                  (task.tags || []).length > 0 && h('div', { className: 'flex flex-wrap gap-1 w-full mt-1' },
+                    task.tags.map(tg => h('span', { key: tg, className: 'tag-chip' }, '#', tg))
+                  )
+                )
+              ]
+          ),
+          h('div', { className: 'flex items-center gap-1 flex-shrink-0' },
+            !editing && h('button', { onClick: () => setEditing(true), className: 'p-1.5 text-ctext2 hover:text-ctext hover:bg-elev rounded', title: t('editTask') },
+              h(Settings, { className: 'w-4 h-4' })),
+            h('button', { onClick: deleteTask, className: 'p-1.5 text-ctext2 hover:text-red-500 hover:bg-elev rounded', title: t('deleteTask') },
+              h(Trash2, { className: 'w-4 h-4' })),
+            h('button', { onClick: onClose, className: 'p-1.5 text-ctext2 hover:text-ctext hover:bg-elev rounded' },
+              h(X, { className: 'w-5 h-5' }))
+          )
+        ),
+
+        h('div', { className: 'flex-1 overflow-y-auto scrollbar-thin' },
+          h('div', { className: 'grid grid-cols-3 gap-0' },
+            // LEFT — main content
+            h('div', { className: 'col-span-2 p-6 space-y-5 border-r border-edge' },
+              !editing && task.description && h('div', { className: 'text-sm text-ctext2 whitespace-pre-wrap' }, task.description),
+              // Status transition
+              !editing && h('div', { className: 'p-4 bg-sunken border border-edge rounded-md' },
+                h('div', { className: 'text-[10px] uppercase tracking-wider text-ctext3 mb-3 font-semibold flex items-center gap-1.5' },
+                  h(ArrowRight, { className: 'w-3 h-3' }), t('statusChange')
+                ),
+                pendingReq ? h('div', { className: 'flex items-center justify-between gap-3' },
+                  h('div', { className: 'flex items-center gap-2 text-sm' },
+                    h(Hourglass, { className: 'w-4 h-4 text-amber-500' }),
+                    h('span', null, t('awaitingApproval'), ': ',
+                      h('span', { className: 'font-medium' }, t(STATUSES.find(s => s.id === pendingReq.from_status)?.tk)), ' ',
+                      h(ArrowRight, { className: 'w-3 h-3 inline' }), ' ',
+                      h('span', { className: 'font-medium text-accent' }, t(STATUSES.find(s => s.id === pendingReq.to_status)?.tk))
+                    )
+                  ),
+                  pendingReq.requested_by === profile.id && h(Button, { size: 'sm', variant: 'ghost', onClick: cancelRequest, disabled: busy }, t('withdraw'))
+                )
+                : targetStatus ? h('div', null,
+                  h('div', { className: 'flex items-center gap-2 text-sm mb-3' },
+                    h(ShieldCheck, { className: 'w-4 h-4 text-accent' }),
+                    h('span', null, t('requiresApproval'), ': ',
+                      h('span', { className: 'font-medium text-accent' }, t(STATUSES.find(s => s.id === targetStatus)?.tk))
+                    )
+                  ),
+                  h(Textarea, { value: reqMessage, onChange: e => setReqMessage(e.target.value), rows: 2, placeholder: t('whyChange'), className: 'mb-3' }),
+                  h('div', { className: 'flex gap-2' },
+                    h(Button, { size: 'sm', variant: 'ghost', onClick: () => { setTargetStatus(null); setReqMessage(''); } }, t('cancel')),
+                    h(Button, { size: 'sm', onClick: () => requestStatusChange(targetStatus), disabled: busy },
+                      busy && h(Spinner, { className: 'w-3 h-3' }), h(Send, { className: 'w-3.5 h-3.5' }), t('sendForApproval'))
+                  )
+                )
+                : h('div', { className: 'flex flex-wrap gap-2' },
+                  STATUSES.filter(s => s.id !== task.status).map(s => {
+                    const needs = needsApproval(s.id);
+                    return h('button', {
+                      key: s.id, onClick: () => needs ? setTargetStatus(s.id) : directMove(s.id), disabled: busy,
+                      className: 'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-elev hover:bg-edge border border-edge rounded transition-colors'
+                    },
+                      h('div', { className: cn('w-1.5 h-1.5 rounded-full', `bg-${s.color}`) }),
+                      t(s.tk),
+                      needs && h(ShieldCheck, { className: 'w-3 h-3 text-accent' })
+                    );
+                  })
+                )
+              ),
+              err && h('div', { className: 'text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2' }, err),
+
+              // Inner tabs: chat / checklist
+              h('div', { className: 'flex gap-1 border-b border-edge' },
+                [
+                  { id: 'chat', label: t('chat'), icon: MessageSquare, badge: comments.length },
+                  { id: 'checklist', label: t('checklist'), icon: ListChecks, badge: checklist.filter(c => c.is_done).length + '/' + checklist.length },
+                ].map(it => h('button', {
+                  key: it.id, onClick: () => setTab(it.id),
+                  className: cn('px-3 py-2 text-sm flex items-center gap-2 border-b-2 -mb-px transition-colors',
+                    tab === it.id ? 'border-accent text-ctext' : 'border-transparent text-ctext2 hover:text-ctext')
+                },
+                  h(it.icon, { className: 'w-3.5 h-3.5' }), it.label,
+                  it.badge !== '0' && it.badge !== 0 && h('span', { className: 'text-[10px] text-ctext3 font-mono' }, '(', it.badge, ')')
+                ))
+              ),
+
+              tab === 'chat' && h(ChatPanel, { task, team, members, comments, onChange: loadAll }),
+              tab === 'checklist' && h(ChecklistPanel, { task, team, items: checklist, onChange: loadAll }),
+            ),
+
+            // RIGHT — sidebar (assignee, time, etc.)
+            h('div', { className: 'p-6 space-y-5' },
+              h('div', null,
+                h('div', { className: 'text-[10px] uppercase tracking-wider text-ctext3 mb-2 font-semibold' }, t('assignee')),
+                assignee ? h('div', { className: 'flex items-center gap-2' },
+                  h(Avatar, { user: assignee, size: 'sm' }),
+                  h('span', { className: 'text-sm text-ctext' }, assignee.full_name)
+                ) : h('span', { className: 'text-sm text-ctext3' }, t('unassigned'))
+              ),
+              h('div', null,
+                h('div', { className: 'text-[10px] uppercase tracking-wider text-ctext3 mb-2 font-semibold' }, t('created')),
+                creator ? h('div', { className: 'flex items-center gap-2' },
+                  h(Avatar, { user: creator, size: 'sm' }),
+                  h('span', { className: 'text-sm text-ctext' }, creator.full_name)
+                ) : h('span', { className: 'text-sm text-ctext3' }, '—')
+              ),
+              task.estimated_hours && h('div', null,
+                h('div', { className: 'text-[10px] uppercase tracking-wider text-ctext3 mb-2 font-semibold' }, t('estimated')),
+                h('div', { className: 'text-sm text-ctext' }, task.estimated_hours, ' ', t('hrs'))
+              ),
+              // Time tracking widget
+              h('div', { className: 'p-3 bg-sunken border border-edge rounded-md' },
+                h('div', { className: 'text-[10px] uppercase tracking-wider text-ctext3 mb-2 font-semibold flex items-center gap-1.5' },
+                  h(Clock, { className: 'w-3 h-3' }), t('timeTracking')
+                ),
+                h('div', { className: 'text-2xl font-mono font-semibold text-ctext mb-2' }, formatDuration(totalSeconds)),
+                activeTimer ? h('div', { className: 'space-y-2' },
+                  h('div', { className: 'flex items-center gap-2 text-xs text-emerald-500' },
+                    h('div', { className: 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' }),
+                    t('currentlyTracking')
+                  ),
+                  h(Button, { size: 'sm', variant: 'danger', onClick: stopTimer, className: 'w-full justify-center' },
+                    h(Square, { className: 'w-3.5 h-3.5' }), t('stopTimer'))
+                ) : h(Button, { size: 'sm', onClick: startTimer, className: 'w-full justify-center' },
+                  h(Play, { className: 'w-3.5 h-3.5' }), t('startTimer')
+                ),
+                // entries breakdown by user
+                timeEntries.length > 0 && h('div', { className: 'mt-3 pt-3 border-t border-edge space-y-1.5' },
+                  Object.entries(
+                    timeEntries.filter(e => e.duration_seconds).reduce((acc, e) => {
+                      const key = e.user_id;
+                      acc[key] = (acc[key] || { user: e.profiles, total: 0 });
+                      acc[key].total += e.duration_seconds;
+                      return acc;
+                    }, {})
+                  ).map(([uid, info]) => h('div', { key: uid, className: 'flex items-center justify-between text-xs' },
+                    h('div', { className: 'flex items-center gap-1.5 text-ctext2' },
+                      h(Avatar, { user: info.user, size: 'xs' }),
+                      h('span', null, info.user?.full_name)
+                    ),
+                    h('span', { className: 'font-mono text-ctext' }, formatDuration(info.total))
+                  ))
+                )
+              )
+            )
+          )
+        )
+      );
+    }
+
+    function EditTaskForm({ task, members, onSave, onCancel, busy }) {
+      const { t } = usePrefs();
+      const [title, setTitle] = useState(task.title);
+      const [description, setDescription] = useState(task.description || '');
+      const [priority, setPriority] = useState(task.priority);
+      const [assigneeId, setAssigneeId] = useState(task.assignee_id || '');
+      const [startDate, setStartDate] = useState(task.start_date || '');
+      const [dueDate, setDueDate] = useState(task.due_date || '');
+      const [estimated, setEstimated] = useState(task.estimated_hours || '');
+      const [tags, setTags] = useState(task.tags || []);
+      const [tagInput, setTagInput] = useState('');
+
+      const addTag = () => {
+        const v = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (v && !tags.includes(v)) setTags([...tags, v]);
+        setTagInput('');
+      };
+
+      return h('div', { className: 'space-y-3' },
+        h(Input, { value: title, onChange: e => setTitle(e.target.value), className: 'text-lg font-medium' }),
+        h(Textarea, { value: description, onChange: e => setDescription(e.target.value), rows: 3 }),
+        h('div', { className: 'grid grid-cols-2 gap-2' },
+          h(Select, { value: priority, onChange: e => setPriority(e.target.value) },
+            PRIORITIES.map(p => h('option', { key: p.id, value: p.id }, t(p.tk)))
+          ),
+          h(Select, { value: assigneeId, onChange: e => setAssigneeId(e.target.value) },
+            h('option', { value: '' }, t('noone')),
+            members.map(m => h('option', { key: m.id, value: m.id }, m.full_name))
+          )
+        ),
+        h('div', { className: 'grid grid-cols-3 gap-2' },
+          h(Input, { type: 'date', value: startDate, onChange: e => setStartDate(e.target.value), title: t('startDate') }),
+          h(Input, { type: 'date', value: dueDate, onChange: e => setDueDate(e.target.value), title: t('dueDate') }),
+          h(Input, { type: 'number', step: '0.5', value: estimated, onChange: e => setEstimated(e.target.value), placeholder: t('estimated') })
+        ),
+        h('div', null,
+          h('div', { className: 'flex flex-wrap gap-1.5 mb-2' },
+            tags.map(tag => h('span', { key: tag, className: 'tag-chip' },
+              '#', tag,
+              h('button', { type: 'button', onClick: () => setTags(tags.filter(x => x !== tag)), className: 'ml-1 text-ctext3 hover:text-red-500' },
+                h(X, { className: 'w-2.5 h-2.5' })
+              )
+            ))
+          ),
+          h(Input, {
+            value: tagInput, onChange: e => setTagInput(e.target.value),
+            onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } },
+            placeholder: t('tagsPlaceholder')
+          })
+        ),
+        h('div', { className: 'flex gap-2' },
+          h(Button, { size: 'sm', variant: 'ghost', onClick: onCancel, type: 'button' }, t('cancel')),
+          h(Button, { size: 'sm', onClick: () => onSave({
+            title, description, priority,
+            assignee_id: assigneeId || null,
+            start_date: startDate || null,
+            due_date: dueDate || null,
+            estimated_hours: estimated ? parseFloat(estimated) : null,
+            tags
+          }), disabled: busy },
+            busy && h(Spinner, { className: 'w-3 h-3' }), t('save'))
+        )
+      );
+    }
+    // ============================================================
+    // CHAT PANEL with @mentions
+    // ============================================================
+    function ChatPanel({ task, team, members, comments, onChange }) {
+      const { profile } = useAuth(); const { t, lang } = usePrefs();
+      const [text, setText] = useState('');
+      const [busy, setBusy] = useState(false);
+      const [mentionOpen, setMentionOpen] = useState(false);
+      const [mentionQuery, setMentionQuery] = useState('');
+      const [mentionStart, setMentionStart] = useState(0);
+      const inputRef = useRef(null);
+      const scrollRef = useRef(null);
+
+      useEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, [comments]);
+
+      const handleChange = (e) => {
+        const v = e.target.value;
+        setText(v);
+        const pos = e.target.selectionStart;
+        const before = v.slice(0, pos);
+        const m = before.match(/@(\w*)$/);
+        if (m) {
+          setMentionStart(pos - m[0].length);
+          setMentionQuery(m[1]);
+          setMentionOpen(true);
+        } else setMentionOpen(false);
+      };
+
+      const insertMention = (member) => {
+        const before = text.slice(0, mentionStart);
+        const after = text.slice(mentionStart + 1 + mentionQuery.length);
+        const newText = before + '@' + member.username + ' ' + after;
+        setText(newText);
+        setMentionOpen(false);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      };
+
+      const filteredMembers = useMemo(() => {
+        const q = mentionQuery.toLowerCase();
+        return members.filter(m => m.username.includes(q) || m.full_name.toLowerCase().includes(q)).slice(0, 5);
+      }, [mentionQuery, members]);
+
+      const submit = async (e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        setBusy(true);
+        try {
+          const mentions = parseMentions(text, members);
+          await supabase.from('task_comments').insert({
+            task_id: task.id, team_id: team.id, user_id: profile.id,
+            content: text, mentioned_user_ids: mentions
+          });
+          setText('');
+          await onChange();
+        } finally { setBusy(false); }
+      };
+
+      return h('div', { className: 'flex flex-col h-[400px]' },
+        h('div', { ref: scrollRef, className: 'flex-1 overflow-y-auto scrollbar-thin space-y-3 mb-3 pr-1' },
+          comments.length === 0 && h('div', { className: 'text-center text-sm text-ctext3 py-8' }, t('noComments')),
+          comments.map(c => {
+            const mine = c.user_id === profile.id;
+            return h('div', { key: c.id, className: cn('flex gap-2.5', mine && 'flex-row-reverse') },
+              h(Avatar, { user: c.profiles, size: 'sm' }),
+              h('div', { className: cn('flex-1 min-w-0 max-w-[80%]', mine && 'text-right') },
+                h('div', { className: cn('flex items-baseline gap-2 mb-0.5', mine && 'justify-end') },
+                  h('span', { className: 'text-xs font-medium text-ctext' }, c.profiles?.full_name),
+                  h('span', { className: 'text-[10px] text-ctext3' }, formatDateTime(c.created_at, lang))
+                ),
+                h('div', { className: cn('inline-block text-sm rounded-lg px-3 py-1.5 whitespace-pre-wrap text-left',
+                  mine ? 'bg-accent/15 text-ctext' : 'bg-elev text-ctext2'
+                ) }, renderWithMentions(c.content, members))
+              )
+            );
+          })
+        ),
+        h('form', { onSubmit: submit, className: 'relative' },
+          mentionOpen && filteredMembers.length > 0 && h('div', { className: 'absolute bottom-full mb-1 left-0 right-0 bg-surface border border-edge rounded-md shadow-lg overflow-hidden z-10 max-h-48 overflow-y-auto' },
+            filteredMembers.map(m => h('button', {
+              key: m.id, type: 'button', onClick: () => insertMention(m),
+              className: 'w-full text-left px-3 py-2 hover:bg-elev flex items-center gap-2 text-sm'
+            },
+              h(Avatar, { user: m, size: 'xs' }),
+              h('span', { className: 'font-medium' }, m.full_name),
+              h('span', { className: 'text-ctext3 text-xs' }, '@', m.username)
+            ))
+          ),
+          h('div', { className: 'flex gap-2' },
+            h('div', { className: 'flex-1 relative' },
+              h(AtSign, { className: 'absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ctext3 pointer-events-none' }),
+              h('input', {
+                ref: inputRef,
+                value: text, onChange: handleChange,
+                placeholder: t('addComment'),
+                className: 'w-full bg-surface border border-edge rounded-md pl-8 pr-3 py-2 text-sm text-ctext placeholder:text-ctext3 focus:outline-none focus:border-accent'
+              })
+            ),
+            h(Button, { type: 'submit', disabled: busy || !text.trim() }, h(Send, { className: 'w-3.5 h-3.5' }))
+          )
+        )
+      );
+    }
+
+    // ============================================================
+    // CHECKLIST PANEL
+    // ============================================================
+    function ChecklistPanel({ task, team, items, onChange }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [text, setText] = useState('');
+      const [busy, setBusy] = useState(false);
+
+      const add = async (e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        setBusy(true);
+        try {
+          await supabase.from('task_checklist_items').insert({
+            task_id: task.id, team_id: team.id, content: text, created_by: profile.id,
+            position: items.length
+          });
+          setText(''); onChange();
+        } finally { setBusy(false); }
+      };
+
+      const toggle = async (item) => {
+        await supabase.from('task_checklist_items').update({ is_done: !item.is_done }).eq('id', item.id);
+        onChange();
+      };
+
+      const remove = async (id) => {
+        await supabase.from('task_checklist_items').delete().eq('id', id);
+        onChange();
+      };
+
+      const done = items.filter(i => i.is_done).length;
+      const pct = items.length === 0 ? 0 : Math.round(done / items.length * 100);
+
+      return h('div', { className: 'space-y-3' },
+        items.length > 0 && h('div', null,
+          h('div', { className: 'flex items-center justify-between text-xs text-ctext2 mb-1.5' },
+            h('span', null, done, '/', items.length, ' completed'),
+            h('span', { className: 'font-mono' }, pct, '%')
+          ),
+          h('div', { className: 'h-1.5 bg-sunken rounded-full overflow-hidden' },
+            h('div', { className: 'h-full bg-accent transition-all', style: { width: pct + '%' } })
+          )
+        ),
+        h('div', { className: 'space-y-1.5' },
+          items.map(item => h('div', {
+            key: item.id, className: 'flex items-center gap-2 group p-1.5 rounded hover:bg-elev'
+          },
+            h('button', {
+              onClick: () => toggle(item),
+              className: cn('w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                item.is_done ? 'bg-accent border-accent' : 'border-edge hover:border-accent')
+            }, item.is_done && h(Check, { className: 'w-3 h-3 text-white' })),
+            h('span', { className: cn('flex-1 text-sm', item.is_done ? 'text-ctext3 line-through' : 'text-ctext') }, item.content),
+            h('button', { onClick: () => remove(item.id), className: 'opacity-0 group-hover:opacity-100 text-ctext3 hover:text-red-500' },
+              h(X, { className: 'w-3.5 h-3.5' }))
+          ))
+        ),
+        h('form', { onSubmit: add, className: 'flex gap-2' },
+          h(Input, { value: text, onChange: e => setText(e.target.value), placeholder: t('addChecklistItem') }),
+          h(Button, { type: 'submit', size: 'sm', disabled: busy || !text.trim() }, h(Plus, { className: 'w-3.5 h-3.5' }))
+        )
+      );
+    }
+    // ============================================================
+    // APPROVALS TAB
+    // ============================================================
+    function ApprovalsTab({ approvals, isLeader, onChange }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const pending = approvals.filter(a => a.status === 'pending');
+      const reviewed = approvals.filter(a => a.status !== 'pending').slice(0, 20);
+      const [busy, setBusy] = useState(null);
+      const [rejectMsg, setRejectMsg] = useState('');
+      const [rejectingId, setRejectingId] = useState(null);
+
+      const review = async (id, status, message) => {
+        setBusy(id);
+        try {
+          await supabase.from('task_approval_requests').update({
+            status, reviewed_by: profile.id, review_message: message || null, reviewed_at: new Date().toISOString()
+          }).eq('id', id);
+          if (status === 'approved') {
+            const req = approvals.find(a => a.id === id);
+            if (req) await supabase.from('tasks').update({ status: req.to_status }).eq('id', req.task_id);
+          }
+          await onChange();
+          setRejectingId(null); setRejectMsg('');
+        } finally { setBusy(null); }
+      };
+
+      return h('div', { className: 'p-6 max-w-3xl' },
+        pending.length === 0 && reviewed.length === 0 && h('div', { className: 'text-center py-16' },
+          h('div', { className: 'inline-flex items-center justify-center w-16 h-16 rounded-full bg-elev mb-4' },
+            h(Inbox, { className: 'w-7 h-7 text-ctext3' })
+          ),
+          h('h3', { className: 'text-lg font-semibold mb-1' }, t('noApprovals')),
+          h('p', { className: 'text-sm text-ctext2' }, t('noApprovalsDesc'))
+        ),
+        pending.length > 0 && h('div', { className: 'mb-8' },
+          h('h3', { className: 'text-sm font-semibold mb-3 flex items-center gap-2' },
+            h(Hourglass, { className: 'w-4 h-4 text-amber-500' }), t('pending'), ' (', pending.length, ')'),
+          h('div', { className: 'space-y-3' },
+            pending.map(req => h('div', { key: req.id, className: 'bg-surface border border-edge rounded-lg p-4' },
+              h('div', { className: 'flex items-start gap-3 mb-3' },
+                h(Avatar, { user: req.profiles, size: 'sm' }),
+                h('div', { className: 'flex-1' },
+                  h('div', { className: 'text-sm' },
+                    h('span', { className: 'font-medium' }, req.profiles?.full_name),
+                    h('span', { className: 'text-ctext2' }, ' ', t('wantsToMove'))
+                  ),
+                  h('div', { className: 'text-sm font-medium mt-1 text-ctext' }, '"', req.tasks?.title, '"'),
+                  h('div', { className: 'flex items-center gap-2 mt-2 text-xs' },
+                    h(Badge, null, t(STATUSES.find(s => s.id === req.from_status)?.tk)),
+                    h(ArrowRight, { className: 'w-3 h-3 text-ctext3' }),
+                    h(Badge, { variant: 'ember' }, t(STATUSES.find(s => s.id === req.to_status)?.tk))
+                  ),
+                  req.message && h('div', { className: 'mt-2 text-sm text-ctext2 bg-sunken border border-edge rounded px-3 py-2' }, req.message)
+                )
+              ),
+              isLeader && rejectingId !== req.id && h('div', { className: 'flex gap-2 justify-end' },
+                h(Button, { size: 'sm', variant: 'danger', onClick: () => setRejectingId(req.id), disabled: busy === req.id }, h(X, { className: 'w-3.5 h-3.5' }), t('reject')),
+                h(Button, { size: 'sm', onClick: () => review(req.id, 'approved'), disabled: busy === req.id },
+                  busy === req.id && h(Spinner, { className: 'w-3 h-3' }), h(Check, { className: 'w-3.5 h-3.5' }), t('confirm'))
+              ),
+              isLeader && rejectingId === req.id && h('div', { className: 'space-y-2 pt-2 border-t border-edge' },
+                h(Textarea, { value: rejectMsg, onChange: e => setRejectMsg(e.target.value), rows: 2, placeholder: t('whyReject') }),
+                h('div', { className: 'flex gap-2 justify-end' },
+                  h(Button, { size: 'sm', variant: 'ghost', onClick: () => { setRejectingId(null); setRejectMsg(''); } }, t('cancel')),
+                  h(Button, { size: 'sm', variant: 'danger', onClick: () => review(req.id, 'rejected', rejectMsg) }, t('reject'))
+                )
+              ),
+              !isLeader && h('div', { className: 'text-xs text-ctext3 italic' }, t('awaitingLeader'))
+            ))
+          )
+        ),
+        reviewed.length > 0 && h('div', null,
+          h('h3', { className: 'text-sm font-semibold mb-3 text-ctext2' }, t('history')),
+          h('div', { className: 'space-y-2' },
+            reviewed.map(req => h('div', { key: req.id, className: 'bg-surface border border-edge rounded-md p-3 flex items-center justify-between gap-3' },
+              h('div', { className: 'flex items-center gap-2 text-sm flex-1 min-w-0' },
+                h(Avatar, { user: req.profiles, size: 'xs' }),
+                h('span', { className: 'text-ctext2 truncate' }, req.profiles?.full_name, ' • ', req.tasks?.title)
+              ),
+              h(Badge, { variant: req.status }, req.status === 'approved' ? t('approved') : t('rejected'))
+            ))
+          )
+        )
+      );
+    }
+
+    // ============================================================
+    // MEMBERS TAB
+    // ============================================================
+    function MembersTab({ members, team, isLeader, onChange }) {
+      const { profile } = useAuth(); const { t } = usePrefs();
+      const [busy, setBusy] = useState(null);
+
+      const changeRole = async (memberId, newRole) => {
+        setBusy(memberId);
+        try {
+          await supabase.from('team_members').update({ role: newRole }).eq('team_id', team.id).eq('user_id', memberId);
+          await onChange();
+        } finally { setBusy(null); }
+      };
+
+      const removeMember = async (memberId) => {
+        if (!confirm(t('confirmRemoveMember'))) return;
+        setBusy(memberId);
+        try {
+          await supabase.from('team_members').delete().eq('team_id', team.id).eq('user_id', memberId);
+          await onChange();
+        } finally { setBusy(null); }
+      };
+
+      const sorted = [...members].sort((a, b) => {
+        if (a.role === 'leader' && b.role !== 'leader') return -1;
+        if (a.role !== 'leader' && b.role === 'leader') return 1;
+        return a.full_name.localeCompare(b.full_name);
+      });
+
+      return h('div', { className: 'p-6 max-w-3xl' },
+        h('div', { className: 'flex items-center justify-between mb-4' },
+          h('h3', { className: 'text-sm font-semibold' }, t('members'), ' (', members.length, ')'),
+          h('div', { className: 'flex items-center gap-2 text-xs text-ctext2' },
+            t('inviteCode'), ':',
+            h('code', { className: 'font-mono text-accent bg-surface border border-edge px-2 py-0.5 rounded' }, team.team_code),
+            h('button', { onClick: () => navigator.clipboard.writeText(team.team_code), className: 'text-ctext3 hover:text-accent' }, h(Copy, { className: 'w-3 h-3' }))
+          )
+        ),
+        h('div', { className: 'bg-surface border border-edge rounded-lg overflow-hidden' },
+          sorted.map((m, i) => h('div', { key: m.id, className: cn('flex items-center gap-3 px-4 py-3', i !== sorted.length - 1 && 'border-b border-edge') },
+            h(Avatar, { user: m, size: 'md' }),
+            h('div', { className: 'flex-1 min-w-0' },
+              h('div', { className: 'font-medium text-sm flex items-center gap-2' },
+                m.full_name,
+                m.id === profile.id && h('span', { className: 'text-xs text-ctext3' }, '(', t('you'), ')')
+              ),
+              h('div', { className: 'text-xs text-ctext3' }, '@', m.username)
+            ),
+            h(Badge, { variant: m.role }, m.role === 'leader' ? h(Crown, { className: 'w-2.5 h-2.5' }) : h(UserIcon, { className: 'w-2.5 h-2.5' }),
+              m.role === 'leader' ? t('leader') : t('worker')),
+            isLeader && m.id !== profile.id && h('div', { className: 'flex items-center gap-1' },
+              h('button', {
+                onClick: () => changeRole(m.id, m.role === 'leader' ? 'worker' : 'leader'),
+                disabled: busy === m.id,
+                className: 'text-xs text-ctext2 hover:text-accent px-2 py-1 rounded hover:bg-elev'
+              }, m.role === 'leader' ? t('makeWorker') : t('makeLeader')),
+              h('button', { onClick: () => removeMember(m.id), disabled: busy === m.id, className: 'text-ctext2 hover:text-red-500 p-1.5 rounded hover:bg-elev' },
+                h(Trash2, { className: 'w-3.5 h-3.5' }))
+            )
+          ))
+        )
+      );
+    }
+
+    // ============================================================
+    // SETTINGS TAB
+    // ============================================================
+    function SettingsTab({ team, onChange }) {
+      const { t } = usePrefs();
+      const [name, setName] = useState(team.name);
+      const [description, setDescription] = useState(team.description || '');
+      const [busy, setBusy] = useState(false);
+      const [msg, setMsg] = useState('');
+
+      const save = async (e) => {
+        e.preventDefault(); setBusy(true); setMsg('');
+        try {
+          await supabase.from('teams').update({ name, description }).eq('id', team.id);
+          setMsg(t('save') + ' ✓'); onChange();
+        } finally { setBusy(false); setTimeout(() => setMsg(''), 2000); }
+      };
+
+      const deleteTeam = async () => {
+        if (!confirm(t('deleteTeamConfirm'))) return;
+        await supabase.from('teams').delete().eq('id', team.id);
+        window.location.reload();
+      };
+
+      return h('div', { className: 'p-6 max-w-xl' },
+        h('form', { onSubmit: save, className: 'bg-surface border border-edge rounded-lg p-5 space-y-4 mb-4' },
+          h('h3', { className: 'text-sm font-semibold mb-2' }, t('teamSettings')),
+          h('div', null, h(Label, null, t('teamName')),
+            h(Input, { value: name, onChange: e => setName(e.target.value), required: true })),
+          h('div', null, h(Label, null, t('description')),
+            h(Textarea, { value: description, onChange: e => setDescription(e.target.value), rows: 3 })),
+          h('div', { className: 'flex items-center justify-between' },
+            msg && h('span', { className: 'text-xs text-emerald-500' }, msg),
+            h(Button, { type: 'submit', disabled: busy, className: 'ml-auto' },
+              busy && h(Spinner, { className: 'w-3.5 h-3.5' }), t('save'))
+          )
+        ),
+        h('div', { className: 'bg-red-500/5 border border-red-500/30 rounded-lg p-5' },
+          h('h3', { className: 'text-sm font-semibold mb-1 text-red-500' }, t('dangerZone')),
+          h('p', { className: 'text-xs text-ctext2 mb-3' }, t('deleteTeamDesc')),
+          h(Button, { variant: 'danger', size: 'sm', onClick: deleteTeam }, h(Trash2, { className: 'w-3.5 h-3.5' }), t('deleteTeam'))
+        )
+      );
+    }
+    // ============================================================
+    // REPORTS TAB (with charts using SVG)
+    // ============================================================
+    function ReportsTab({ tasks, members, team }) {
+      const { t, lang } = usePrefs();
+
+      const stats = useMemo(() => {
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.status === 'done').length;
+        const active = tasks.filter(t => t.status === 'in_progress' || t.status === 'in_review').length;
+        const overdue = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date()).length;
+        return { total, completed, active, overdue };
+      }, [tasks]);
+
+      const byStatus = useMemo(() => STATUSES.map(s => ({
+        ...s, count: tasks.filter(tt => tt.status === s.id).length
+      })), [tasks]);
+
+      const byPriority = useMemo(() => PRIORITIES.map(p => ({
+        ...p, count: tasks.filter(tt => tt.priority === p.id).length
+      })), [tasks]);
+
+      const byAssignee = useMemo(() => {
+        const map = new Map();
+        members.forEach(m => map.set(m.id, { user: m, count: 0, done: 0 }));
+        tasks.forEach(tt => {
+          if (tt.assignee_id && map.has(tt.assignee_id)) {
+            const s = map.get(tt.assignee_id);
+            s.count++;
+            if (tt.status === 'done') s.done++;
+          }
+        });
+        return [...map.values()].filter(x => x.count > 0).sort((a, b) => b.count - a.count);
+      }, [tasks, members]);
+
+      // Completion trend - last 30 days
+      const trend = useMemo(() => {
+        const days = [];
+        for (let i = 29; i >= 0; i--) {
+          const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
+          const next = new Date(d); next.setDate(next.getDate() + 1);
+          const cnt = tasks.filter(tt => tt.completed_at && new Date(tt.completed_at) >= d && new Date(tt.completed_at) < next).length;
+          days.push({ date: d, count: cnt });
+        }
+        return days;
+      }, [tasks]);
+
+      const maxTrend = Math.max(1, ...trend.map(d => d.count));
+      const maxStatusCount = Math.max(1, ...byStatus.map(s => s.count));
+      const maxPriorityCount = Math.max(1, ...byPriority.map(p => p.count));
+
+      if (tasks.length === 0) {
+        return h('div', { className: 'p-12 text-center' },
+          h('div', { className: 'inline-flex items-center justify-center w-16 h-16 rounded-full bg-elev mb-4' },
+            h(BarChart3, { className: 'w-7 h-7 text-ctext3' })),
+          h('h3', { className: 'text-lg font-semibold mb-1' }, t('noData')),
+          h('p', { className: 'text-sm text-ctext2' }, t('noTasksDesc'))
+        );
+      }
+
+      return h('div', { className: 'p-6 space-y-5 max-w-5xl' },
+        // KPI cards
+        h('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-3' },
+          h(KpiCard, { label: t('totalTasks'), value: stats.total, icon: CheckSquare, color: 'text-ctext' }),
+          h(KpiCard, { label: t('completedTasks'), value: stats.completed, icon: Check, color: 'text-emerald-500' }),
+          h(KpiCard, { label: t('activeTasks'), value: stats.active, icon: Hourglass, color: 'text-sky-500' }),
+          h(KpiCard, { label: t('overdueTasks'), value: stats.overdue, icon: AlertCircle, color: 'text-red-500' }),
+        ),
+
+        // Charts grid
+        h('div', { className: 'grid lg:grid-cols-2 gap-4' },
+          // By Status
+          h('div', { className: 'bg-surface border border-edge rounded-lg p-5' },
+            h('h3', { className: 'text-sm font-semibold mb-4' }, t('tasksByStatus')),
+            h('div', { className: 'space-y-3' },
+              byStatus.map(s => h('div', { key: s.id },
+                h('div', { className: 'flex items-center justify-between text-xs mb-1' },
+                  h('div', { className: 'flex items-center gap-2 text-ctext2' },
+                    h('div', { className: cn('w-2 h-2 rounded-full', `bg-${s.color}`) }),
+                    t(s.tk)
+                  ),
+                  h('span', { className: 'font-mono text-ctext' }, s.count)
+                ),
+                h('div', { className: 'h-2 bg-sunken rounded-full overflow-hidden' },
+                  h('div', { className: cn('h-full transition-all', `bg-${s.color}`), style: { width: (s.count / maxStatusCount * 100) + '%' } })
+                )
+              ))
+            )
+          ),
+          // By Priority
+          h('div', { className: 'bg-surface border border-edge rounded-lg p-5' },
+            h('h3', { className: 'text-sm font-semibold mb-4' }, t('tasksByPriority')),
+            h('div', { className: 'space-y-3' },
+              byPriority.map(p => {
+                const colors = { urgent: 'bg-accent', high: 'bg-amber-500', medium: 'bg-ctext2', low: 'bg-ctext3' };
+                return h('div', { key: p.id },
+                  h('div', { className: 'flex items-center justify-between text-xs mb-1' },
+                    h('div', { className: 'flex items-center gap-2 text-ctext2' },
+                      h(Flag, { className: 'w-3 h-3' }), t(p.tk)),
+                    h('span', { className: 'font-mono text-ctext' }, p.count)
+                  ),
+                  h('div', { className: 'h-2 bg-sunken rounded-full overflow-hidden' },
+                    h('div', { className: cn('h-full transition-all', colors[p.id]), style: { width: (p.count / maxPriorityCount * 100) + '%' } })
+                  )
+                );
+              })
+            )
+          ),
+          // By Assignee
+          h('div', { className: 'bg-surface border border-edge rounded-lg p-5' },
+            h('h3', { className: 'text-sm font-semibold mb-4' }, t('tasksByAssignee')),
+            byAssignee.length === 0 ? h('p', { className: 'text-sm text-ctext3' }, t('noData')) :
+            h('div', { className: 'space-y-3' },
+              byAssignee.map(a => h('div', { key: a.user.id, className: 'flex items-center gap-3' },
+                h(Avatar, { user: a.user, size: 'sm' }),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'flex items-center justify-between text-xs mb-1' },
+                    h('span', { className: 'truncate text-ctext' }, a.user.full_name),
+                    h('span', { className: 'font-mono text-ctext2' }, a.done, '/', a.count)
+                  ),
+                  h('div', { className: 'h-1.5 bg-sunken rounded-full overflow-hidden' },
+                    h('div', { className: 'h-full bg-accent transition-all', style: { width: (a.done / a.count * 100) + '%' } })
+                  )
+                )
+              ))
+            )
+          ),
+          // Trend chart
+          h('div', { className: 'bg-surface border border-edge rounded-lg p-5' },
+            h('h3', { className: 'text-sm font-semibold mb-4' }, t('completionTrend')),
+            h('svg', { viewBox: '0 0 600 200', className: 'w-full h-32' },
+              // gridlines
+              [0, 0.25, 0.5, 0.75, 1].map(p => h('line', {
+                key: p, x1: 0, x2: 600, y1: 180 * p + 10, y2: 180 * p + 10,
+                stroke: 'rgb(var(--c-edge-subtle))', strokeWidth: 1
+              })),
+              // bars
+              trend.map((d, i) => {
+                const barW = 600 / trend.length - 2;
+                const barH = (d.count / maxTrend) * 170;
+                return h('rect', {
+                  key: i, x: i * (600 / trend.length) + 1, y: 190 - barH,
+                  width: barW, height: barH,
+                  fill: 'rgb(var(--c-accent))', opacity: d.count > 0 ? 0.8 : 0,
+                  rx: 1
+                });
+              }),
+              // labels (every 5th day)
+              trend.map((d, i) => i % 5 === 0 && h('text', {
+                key: 't' + i, x: i * (600 / trend.length) + (600 / trend.length / 2), y: 200,
+                fontSize: 9, fill: 'rgb(var(--c-text-3))', textAnchor: 'middle'
+              }, d.date.getDate() + '/' + (d.date.getMonth() + 1)))
+            )
+          )
+        )
+      );
+    }
+
+    function KpiCard({ label, value, icon: Icon, color }) {
+      return h('div', { className: 'bg-surface border border-edge rounded-lg p-4' },
+        h('div', { className: 'flex items-center justify-between mb-2' },
+          h('span', { className: 'text-[10px] uppercase tracking-wider text-ctext3 font-semibold' }, label),
+          h(Icon, { className: cn('w-4 h-4', color) })
+        ),
+        h('div', { className: 'text-2xl font-semibold' }, value)
+      );
+    }
+
+    // ============================================================
+    // ROOT
+    // ============================================================
+    function App() {
+      const { session, loading, profile } = useAuth();
+      const [needsProfile, setNeedsProfile] = useState(false);
+
+      useEffect(() => {
+        if (!loading && session && !profile) setNeedsProfile(true);
+        else setNeedsProfile(false);
+      }, [loading, session, profile]);
+
+      if (loading) return h('div', { className: 'min-h-screen flex items-center justify-center' }, h(Spinner, { className: 'w-6 h-6 text-accent' }));
+      if (!session) return h(AuthPage);
+      if (needsProfile) return h(CompleteProfile);
+      return h(AppShell);
+    }
+
+    function CompleteProfile() {
+      const { session, refreshProfile } = useAuth(); const { t } = usePrefs();
+      const [fullName, setFullName] = useState('');
+      const [username, setUsername] = useState('');
+      const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+      const submit = async (e) => {
+        e.preventDefault(); setErr(''); setBusy(true);
+        try {
+          const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+          const { error } = await supabase.from('profiles').insert({ id: session.user.id, full_name: fullName, username: clean });
+          if (error) throw error;
+          refreshProfile();
+        } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      };
+      return h('div', { className: 'min-h-screen flex items-center justify-center p-6 relative' },
+        h('div', { className: 'absolute top-6 right-6' }, h(PrefsToggle)),
+        h('form', { onSubmit: submit, className: 'w-full max-w-sm bg-surface border border-edge rounded-lg p-6 space-y-4' },
+          h('h2', { className: 'text-xl font-serif-italic mb-2' }, t('completeProfile')),
+          h('div', null, h(Label, null, t('fullName')),
+            h(Input, { value: fullName, onChange: e => setFullName(e.target.value), required: true })),
+          h('div', null, h(Label, null, t('username')),
+            h(Input, { value: username, onChange: e => setUsername(e.target.value), required: true })),
+          err && h('div', { className: 'text-sm text-red-500' }, err),
+          h(Button, { type: 'submit', disabled: busy, className: 'w-full justify-center' },
+            busy && h(Spinner, { className: 'w-4 h-4' }), t('continueBtn'))
+        )
+      );
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+    function checkConfig() {
+      if (SUPABASE_URL.includes('YOUR-PROJECT') || SUPABASE_ANON_KEY.includes('YOUR-ANON')) {
+        const root = createRoot(document.getElementById('root'));
+        root.render(h(PrefsProvider, null,
+          h('div', { className: 'min-h-screen flex items-center justify-center p-6 relative' },
+            h('div', { className: 'absolute top-6 right-6' }, h(PrefsToggle)),
+            h('div', { className: 'max-w-lg bg-surface border border-amber-500/30 rounded-lg p-6' },
+              h('div', { className: 'flex items-center gap-2 mb-3' },
+                h(AlertCircle, { className: 'w-5 h-5 text-amber-500' }),
+                h('h2', { className: 'text-lg font-semibold' }, 'Konfiqurasiya tələb olunur')
+              ),
+              h('p', { className: 'text-sm text-ctext2 mb-4' }, 'NextTaskX işləməsi üçün Supabase URL və Anon Key təyin edilməlidir.'),
+              h('ol', { className: 'text-sm text-ctext2 space-y-2 list-decimal pl-5 mb-4' },
+                h('li', null, 'Supabase Dashboard-da yeni layihə yaradın'),
+                h('li', null, 'SQL Editor-də ', h('code', { className: 'text-accent font-mono' }, 'schema.sql'), ' faylını işlədin'),
+                h('li', null, 'Project Settings → API-dən URL və anon key-i alın'),
+                h('li', null, 'Bu HTML-də ', h('code', { className: 'text-accent font-mono' }, 'SUPABASE_URL'), ' və ', h('code', { className: 'text-accent font-mono' }, 'SUPABASE_ANON_KEY'), '-i yeniləyin')
+              )
+            )
+          )
+        ));
+        return false;
+      }
+      return true;
+    }
+
+    if (checkConfig()) {
+      const root = createRoot(document.getElementById('root'));
+      root.render(h(PrefsProvider, null, h(AuthProvider, null, h(App))));
+    }
+  </script>
+</body>
+</html>
