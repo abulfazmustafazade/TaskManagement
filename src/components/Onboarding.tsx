@@ -51,7 +51,7 @@ export function Onboarding({ onDone }: OnboardingProps) {
     setErr('');
     setLoading(true);
     try {
-      const { data: team, error } = await supabase.from('teams').select('id').eq('team_code', code.toUpperCase()).maybeSingle();
+      const { data: team, error } = await supabase.from('teams').select('id, team_code').eq('team_code', code.toUpperCase().trim()).maybeSingle();
       if (error) throw error;
       if (!team) throw new Error(t.errors.teamNotFound);
       const { error: mErr } = await supabase.from('team_members').insert({
